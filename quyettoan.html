@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quyết Toán Điện</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    :root {
+      --primary:#0891b2; --primary-dark:#0e7490; --primary-light:#ecfeff;
+      --green:#16a34a; --danger:#dc2626; --warn:#d97706;
+      --bg:#f1f5f9; --surface:#fff; --surface2:#f8fafc;
+      --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --radius:10px; --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    .app-header{background:linear-gradient(135deg,#164e63 0%,#0891b2 60%,#22d3ee 100%);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(8,145,178,.3);}
+    .app-header h1{font-size:17px;font-weight:700;}
+    .app-header .sub{font-size:11px;opacity:.75;margin-top:2px;}
+    .btn-home{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s;}
+    .btn-home:hover{background:rgba(255,255,255,.3);}
+
+    .toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+    .filter-group{display:flex;align-items:center;gap:7px;}
+    .filter-group label{font-size:12px;font-weight:600;color:var(--muted);}
+    .filter-group select{border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;background:var(--surface2);outline:none;}
+    .search-box{position:relative;}
+    .search-box svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);pointer-events:none;stroke:var(--muted);}
+    .search-box input{border:1.5px solid var(--border);border-radius:7px;padding:6px 10px 6px 30px;font-size:12px;outline:none;min-width:200px;transition:border .2s;}
+    .search-box input:focus{border-color:var(--primary);}
+    .status-bar{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-left:auto;}
+    .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;}
+    .dot.ok{background:var(--green);}
+    .dot.err{background:var(--danger);}
+    .dot.loading{background:var(--warn);animation:pulse 1s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:background .15s,transform .1s;white-space:nowrap;}
+    .btn:active{transform:scale(.97);}
+    .btn-primary{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(8,145,178,.25);}
+    .btn-primary:hover{background:var(--primary-dark);}
+    .btn-danger{background:var(--danger);color:#fff;}
+    .btn-danger:hover{background:#b91c1c;}
+
+    .wrap{padding:20px 24px;}
+
+    .info-banner{background:linear-gradient(90deg,#ecfeff,#cffafe);border:1.5px solid #a5f3fc;border-radius:var(--radius);padding:12px 18px;margin-bottom:16px;font-size:12px;color:#0e7490;line-height:1.6;}
+    .info-banner strong{font-weight:700;}
+
+    .table-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .table-scroll{overflow-x:auto;}
+
+    table{width:100%;border-collapse:collapse;font-size:12.5px;}
+    thead tr{background:var(--surface2);}
+    th{padding:9px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap;}
+    th.r,td.r{text-align:right;}
+    td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    tr:last-child td{border-bottom:none;}
+    tr.has-debt td{background:#fefce8;}
+
+    .td-stt{color:var(--muted);font-size:11px;text-align:center;width:32px;}
+    .td-name{font-weight:600;min-width:130px;}
+    .td-tram{color:var(--muted);white-space:nowrap;font-size:12px;}
+    .td-cs{color:var(--muted);font-size:12px;text-align:right;}
+    .td-money{text-align:right;font-size:12px;color:var(--muted);}
+
+    input[type=number].no-cu-input{
+      border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;
+      font-size:12.5px;width:100px;outline:none;text-align:right;
+      background:var(--surface);-moz-appearance:textfield;
+      transition:border .2s,box-shadow .2s;
+    }
+    input[type=number].no-cu-input::-webkit-outer-spin-button,
+    input[type=number].no-cu-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+    input[type=number].no-cu-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(8,145,178,.12);}
+    input[type=number].no-cu-input.has-val{border-color:#f59e0b;background:#fffbeb;}
+
+    /* Confirm modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;}
+    .modal-overlay.hidden{display:none;}
+    .modal-box{background:#fff;border-radius:16px;padding:32px 36px;min-width:340px;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.2);}
+    .modal-box h3{font-size:17px;font-weight:700;margin-bottom:8px;color:var(--text);}
+    .modal-box p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
+    .modal-box ul{font-size:12px;color:var(--text);margin:0 0 20px 18px;line-height:1.8;}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+
+    /* Progress modal */
+    .progress-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1001;display:flex;align-items:center;justify-content:center;}
+    .progress-overlay.hidden{display:none;}
+    .progress-box{background:#fff;border-radius:16px;padding:32px 36px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.2);text-align:center;}
+    .progress-box h3{font-size:16px;font-weight:700;margin-bottom:6px;}
+    .progress-box .sub-text{font-size:13px;color:var(--muted);margin-bottom:20px;}
+    .progress-track{background:#e2e8f0;border-radius:99px;height:10px;overflow:hidden;margin-bottom:12px;}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),#22d3ee);border-radius:99px;transition:width .3s ease;}
+    .progress-label{font-size:13px;font-weight:600;color:var(--primary);}
+    .progress-done{font-size:13px;color:var(--green);font-weight:600;margin-top:10px;}
+    .progress-errors{font-size:12px;color:var(--danger);margin-top:6px;}
+    .btn-close-modal{margin-top:18px;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 24px;font-size:13px;font-weight:600;cursor:pointer;}
+    .btn-close-modal:hover{background:var(--primary-dark);}
+
+    .toast-wrap{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+    .toast{min-width:230px;padding:10px 14px;border-radius:9px;font-size:12px;font-weight:600;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:sIn .25s ease;}
+    .toast.success{background:var(--green);}
+    .toast.error{background:var(--danger);}
+    .toast.info{background:var(--primary);}
+    @keyframes sIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    @keyframes sOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(120%);opacity:0;}}
+    .toast.hide{animation:sOut .25s ease forwards;}
+  </style>
+</head>
+<body>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Confirm modal -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal-box">
+    <h3>⚠️ Xác nhận Quyết Toán</h3>
+    <p>Thao tác này sẽ thực hiện với <strong id="confirmCount">0</strong> khách hàng:</p>
+    <ul>
+      <li>Chỉ số cũ ← Chỉ số mới hiện tại</li>
+      <li>Tất cả các ô tiền (Thành tiền SX, MDK, Cộng tiền, Tổng cộng) → <strong>0</strong></li>
+      <li>Điện SX, MDK tiêu thụ → <strong>0</strong></li>
+      <li>Nợ cũ → giá trị bạn đã nhập (hoặc <strong>0</strong> nếu để trống)</li>
+    </ul>
+    <p style="color:var(--danger);font-weight:600;">Không thể hoàn tác. Bạn có chắc chắn?</p>
+    <div class="modal-actions">
+      <button class="btn" style="background:var(--surface2);color:var(--muted);border:1.5px solid var(--border);" onclick="closeConfirm()">Hủy</button>
+      <button class="btn btn-danger" onclick="doQuyetToan()">✓ Xác nhận Quyết Toán</button>
+    </div>
+  </div>
+</div>
+
+<!-- Progress modal -->
+<div class="progress-overlay hidden" id="progressOverlay">
+  <div class="progress-box">
+    <h3 id="progressTitle">Đang quyết toán...</h3>
+    <div class="sub-text" id="progressSub">Vui lòng đợi, đừng đóng trang</div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-label" id="progressLabel">0 / 0</div>
+    <div class="progress-done hidden" id="progressDone"></div>
+    <div class="progress-errors hidden" id="progressErrors"></div>
+    <button class="btn-close-modal hidden" id="btnCloseModal" onclick="closeProgress()">Đóng</button>
+  </div>
+</div>
+
+<div class="app-header">
+  <div>
+    <h1>🔄 Quyết Toán Điện</h1>
+    <div class="sub">Chốt kỳ — chuyển chỉ số mới thành chỉ số cũ, đưa tiền về 0</div>
+  </div>
+  <a class="btn-home" href="index.html">⌂ Trang chủ</a>
+</div>
+
+<div class="toolbar">
+  <div class="filter-group">
+    <label>Trạm:</label>
+    <select id="filterTram" onchange="applyFilter()">
+      <option value="">Tất cả</option>
+    </select>
+  </div>
+  <div class="search-box">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="searchInput" placeholder="Tìm mã KH, họ tên..." oninput="applyFilter()"/>
+  </div>
+  <button class="btn btn-danger" onclick="confirmQuyetToan()">🔄 Quyết toán tất cả</button>
+  <div class="status-bar">
+    <div class="dot" id="dot"></div>
+    <span id="statusText">Đang tải...</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="info-banner">
+    <strong>Hướng dẫn:</strong> Nhập <strong>Nợ cũ</strong> cho từng khách hàng nếu có (để trống = 0).
+    Sau đó bấm <strong>Quyết toán tất cả</strong> để chốt kỳ: chỉ số cũ ← chỉ số mới, tất cả tiền về 0, nợ cũ cập nhật theo giá trị đã nhập.
+  </div>
+
+  <div class="table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px;">#</th>
+            <th>Họ tên</th>
+            <th>Trạm</th>
+            <th class="r">CS Cũ</th>
+            <th class="r">CS Mới</th>
+            <th class="r">Tổng cộng hiện tại</th>
+            <th class="r">Nợ cũ (kỳ mới)</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+  let allRecords = [], filtered = [];
+  const n = v => parseFloat(v) || 0;
+  const fmt = v => (parseFloat(v)||0).toLocaleString('vi-VN');
+
+  function setStatus(s, t) {
+    document.getElementById('dot').className = 'dot'+(s==='ok'?' ok':s==='err'?' err':' loading');
+    document.getElementById('statusText').textContent = t;
+  }
+
+  async function init() {
+    setStatus('loading','Đang tải...');
+    try {
+      allRecords = await gasGet('KhachHang');
+      buildFilter();
+      applyFilter();
+      setStatus('ok', `Đã tải ${allRecords.length} khách hàng`);
+    } catch(e) {
+      setStatus('err', e.message);
+      toast(e.message, 'error');
+    }
+  }
+
+  function buildFilter() {
+    const trams = [...new Set(allRecords.map(r => r.Tram).filter(Boolean))].sort();
+    const sel = document.getElementById('filterTram');
+    trams.forEach(t => {
+      const o = document.createElement('option');
+      o.value = o.text = t;
+      sel.appendChild(o);
+    });
+  }
+
+  function applyFilter() {
+    const tram = document.getElementById('filterTram').value;
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    filtered = allRecords.filter(r =>
+      (!tram || r.Tram === tram) &&
+      (!q || (r.HoTen||'').toLowerCase().includes(q) || (r.MaKH||'').toLowerCase().includes(q))
+    );
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);">Không có dữ liệu</td></tr>';
+      return;
+    }
+    tbody.innerHTML = filtered.map((r, i) => {
+      const tong = n(r.TongCong);
+      const hasDebt = tong > 0;
+      return `<tr class="${hasDebt ? 'has-debt' : ''}" id="qt_row_${i}">
+        <td class="td-stt">${i + 1}</td>
+        <td class="td-name">${r.HoTen || '—'}</td>
+        <td class="td-tram">${r.Tram || '—'}</td>
+        <td class="td-cs">${fmt(r.ChiSoCu)}</td>
+        <td class="td-cs">${fmt(r.ChiSoMoi)}</td>
+        <td class="td-money" style="${hasDebt ? 'color:#dc2626;font-weight:700;' : ''}">${fmt(tong)} đ</td>
+        <td class="r">
+          <input type="number" class="no-cu-input" id="nocu_${i}" min="0" placeholder="0"
+            oninput="onNoCuInput(${i})" value=""/>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function onNoCuInput(i) {
+    const inp = document.getElementById(`nocu_${i}`);
+    inp.classList.toggle('has-val', inp.value !== '' && n(inp.value) > 0);
+  }
+
+  function confirmQuyetToan() {
+    if (!filtered.length) { toast('Không có dữ liệu để quyết toán!', 'info'); return; }
+    document.getElementById('confirmCount').textContent = filtered.length;
+    document.getElementById('confirmModal').classList.remove('hidden');
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirmModal').classList.add('hidden');
+  }
+
+  async function doQuyetToan() {
+    closeConfirm();
+    const total = filtered.length;
+    let done = 0, errors = [];
+
+    document.getElementById('progressOverlay').classList.remove('hidden');
+    document.getElementById('progressTitle').textContent = `Đang quyết toán ${total} khách hàng...`;
+    document.getElementById('progressSub').textContent = 'Vui lòng đợi, đừng đóng trang';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressLabel').textContent = `0 / ${total}`;
+    document.getElementById('progressDone').classList.add('hidden');
+    document.getElementById('progressErrors').classList.add('hidden');
+    document.getElementById('btnCloseModal').classList.add('hidden');
+
+    for (let i = 0; i < filtered.length; i++) {
+      const r = filtered[i];
+      const noCuMoi = n(document.getElementById(`nocu_${i}`).value); // 0 nếu để trống
+      const chiSoCuMoi = n(r.ChiSoMoi); // chỉ số cũ kỳ mới = chỉ số mới hiện tại
+
+      try {
+        await gasPost({
+          sheet: 'KhachHang', action: 'update', row: r.row,
+          MaKH: r.MaKH, HoTen: r.HoTen,
+          ChiSoCu:        chiSoCuMoi,
+          ChiSoMoi:       chiSoCuMoi,
+          DienSXTieuThu:  n(r.DienSXTieuThu),
+          DienMDKTieuThu: 0,
+          ThanhTienSX:    0,
+          ThanhTienMDK:   0,
+          NoCu:           noCuMoi,
+          CongTien:       0,
+          TongCong:       noCuMoi,
+          SoDienTieuThu:  0,
+          Thon: r.Thon, Tram: r.Tram, DiaChi: r.DiaChi,
+          SoCongTo: r.SoCongTo,
+          SoDT: r.SoDT, Zalo: r.Zalo,
+          NgayCapNhat: new Date().toISOString().slice(0, 10),
+          DinhMuc: n(r.DinhMuc)
+        });
+        done++;
+      } catch(e) {
+        errors.push(r.HoTen || `Hàng ${i+1}`);
+        done++;
+      }
+
+      const pct = Math.round(done / total * 100);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressLabel').textContent = `${done} / ${total}`;
+    }
+
+    // Hoàn thành
+    const ok = total - errors.length;
+    document.getElementById('progressTitle').textContent = 'Hoàn tất!';
+    document.getElementById('progressSub').textContent = '';
+    const doneEl = document.getElementById('progressDone');
+    doneEl.textContent = `✓ Đã quyết toán thành công ${ok} / ${total} khách hàng`;
+    doneEl.classList.remove('hidden');
+    if (errors.length) {
+      const errEl = document.getElementById('progressErrors');
+      errEl.textContent = `Lỗi: ${errors.join(', ')}`;
+      errEl.classList.remove('hidden');
+    }
+    document.getElementById('btnCloseModal').classList.remove('hidden');
+
+    // Reload data
+    if (!errors.length) {
+      allRecords = await gasGet('KhachHang').catch(() => allRecords);
+      applyFilter();
+    }
+  }
+
+  function closeProgress() {
+    document.getElementById('progressOverlay').classList.add('hidden');
+  }
+
+  function toast(msg, type = 'info') {
+    const icons = { success: '✓', error: '✕', info: 'ℹ' };
+    const wrap = document.getElementById('toastWrap');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+    wrap.appendChild(t);
+    setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 280); }, 2800);
+  }
+
+  init();
+</script>
+</body>
+</html>

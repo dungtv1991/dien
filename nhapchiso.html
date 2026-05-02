@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nhập Chỉ Số Mới</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    :root {
+      --primary:#7c3aed; --primary-dark:#6d28d9; --primary-light:#f5f3ff;
+      --green:#16a34a;
+      --bg:#f1f5f9; --surface:#fff; --surface2:#f8fafc;
+      --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
+      --danger:#dc2626; --warn:#d97706;
+      --radius:10px; --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',Arial,sans-serif;font-size:13px;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    .app-header{background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 60%,#a78bfa 100%);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(124,58,237,.3);}
+    .app-header h1{font-size:17px;font-weight:700;}
+    .app-header .sub{font-size:11px;opacity:.75;margin-top:2px;}
+    .btn-home{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s;}
+    .btn-home:hover{background:rgba(255,255,255,.3);}
+
+    .toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+    .filter-group{display:flex;align-items:center;gap:7px;}
+    .filter-group label{font-size:12px;font-weight:600;color:var(--muted);}
+    .filter-group select{border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;background:var(--surface2);outline:none;}
+    .status-bar{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-left:auto;}
+    .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;}
+    .dot.ok{background:var(--green);}
+    .dot.err{background:var(--danger);}
+    .dot.loading{background:var(--warn);animation:pulse 1s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:background .15s,transform .1s;}
+    .btn:active{transform:scale(.97);}
+    .btn-primary{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.25);}
+    .btn-primary:hover{background:var(--primary-dark);}
+
+    .wrap{padding:20px 24px;}
+
+    .table-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .table-scroll{overflow-x:auto;}
+
+    table{width:100%;border-collapse:collapse;font-size:12.5px;}
+    thead tr{background:var(--surface2);}
+    th{padding:9px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap;}
+    th.r,td.r{text-align:right;}
+    td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    tr:last-child td{border-bottom:none;}
+    tr.modified td{background:#fefce8;}
+    tr.done td{background:#f0fdf4;}
+
+    .td-stt{color:var(--muted);font-size:11px;text-align:center;width:32px;padding-left:10px;}
+    .td-name{font-weight:600;min-width:130px;}
+    .td-tram{color:var(--muted);white-space:nowrap;}
+    .td-action{white-space:nowrap;padding-right:10px;}
+
+    input[type=number]{border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;width:88px;outline:none;transition:border .2s,box-shadow .2s;text-align:right;background:var(--surface);-moz-appearance:textfield;}
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+    input[type=number]:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,58,237,.12);}
+    input[type=number].warn{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(220,38,38,.1)!important;}
+    input[type=number][disabled]{background:var(--surface2);color:var(--muted);cursor:default;border-color:transparent;}
+    input.editable{border-color:#c4b5fd;background:#faf5ff;}
+    input.editable:focus{border-color:var(--primary);}
+
+    .warn-msg{font-size:10px;color:var(--danger);margin-top:1px;white-space:nowrap;}
+
+    .btn-save-row{background:#ede9fe;color:#6d28d9;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;}
+    .btn-save-row:hover{background:#ddd6fe;}
+    .btn-save-row.saving{background:#fef9c3;color:#a16207;cursor:default;}
+    .btn-save-row.saved{background:#dcfce7;color:#15803d;cursor:default;}
+
+    /* ── Mode toggle ── */
+    .mode-btn{background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s;}
+    .mode-btn.active{background:rgba(255,255,255,.35);border-color:rgba(255,255,255,.7);}
+    .mode-btn:hover{background:rgba(255,255,255,.25);}
+
+    /* ── HD mode ── */
+    body.mode-hd .wrap{padding:10px 14px;}
+    body.mode-hd table{font-size:11.5px;}
+    body.mode-hd th{padding:6px 8px;}
+    body.mode-hd td{padding:2px 4px;}
+    body.mode-hd input[type=number]{width:74px;padding:3px 6px;font-size:11.5px;}
+    body.mode-hd .btn-save-row{padding:3px 8px;font-size:10px;}
+    body.mode-hd .toolbar{padding:7px 16px;}
+
+    /* ── Progress modal ── */
+    .progress-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:center;justify-content:center;}
+    .progress-overlay.hidden{display:none;}
+    .progress-box{background:#fff;border-radius:16px;padding:32px 36px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.2);text-align:center;}
+    .progress-box h3{font-size:16px;font-weight:700;margin-bottom:6px;color:var(--text);}
+    .progress-box .sub-text{font-size:13px;color:var(--muted);margin-bottom:20px;}
+    .progress-track{background:#e2e8f0;border-radius:99px;height:10px;overflow:hidden;margin-bottom:12px;}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),#a78bfa);border-radius:99px;transition:width .3s ease;}
+    .progress-label{font-size:13px;font-weight:600;color:var(--primary);}
+    .progress-done{font-size:13px;color:var(--green);font-weight:600;margin-top:10px;}
+    .progress-errors{font-size:12px;color:var(--danger);margin-top:6px;}
+    .btn-close-modal{margin-top:18px;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 24px;font-size:13px;font-weight:600;cursor:pointer;}
+    .btn-close-modal:hover{background:var(--primary-dark);}
+
+    .toast-wrap{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+    .toast{min-width:230px;padding:10px 14px;border-radius:9px;font-size:12px;font-weight:600;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:sIn .25s ease;}
+    .toast.success{background:var(--green);}
+    .toast.error{background:var(--danger);}
+    .toast.info{background:var(--primary);}
+    @keyframes sIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    @keyframes sOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(120%);opacity:0;}}
+    .toast.hide{animation:sOut .25s ease forwards;}
+  </style>
+</head>
+<body>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="progress-overlay hidden" id="progressOverlay">
+  <div class="progress-box">
+    <h3 id="progressTitle">Đang lưu dữ liệu...</h3>
+    <div class="sub-text" id="progressSub">Vui lòng đợi, đừng đóng trang</div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="progress-label" id="progressLabel">0 / 0</div>
+    <div class="progress-done hidden" id="progressDone"></div>
+    <div class="progress-errors hidden" id="progressErrors"></div>
+    <button class="btn-close-modal hidden" id="btnCloseModal" onclick="closeProgress()">Đóng</button>
+  </div>
+</div>
+
+<div class="app-header">
+  <div>
+    <h1>📝 Nhập Chỉ Số Mới</h1>
+    <div class="sub">Cập nhật chỉ số công tơ tháng mới — chỉ số cũ tự động lấy từ chỉ số mới kỳ trước</div>
+  </div>
+  <a class="btn-home" href="index.html">⌂ Trang chủ</a>
+</div>
+
+<div class="toolbar">
+  <div class="filter-group">
+    <label>Trạm:</label>
+    <select id="filterTram" onchange="applyFilter()">
+      <option value="">Tất cả</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" onclick="saveAll()">💾 Lưu tất cả đã sửa</button>
+  <button class="mode-btn" id="btnModeHD" onclick="toggleHD()">HD</button>
+  <div class="status-bar">
+    <div class="dot" id="dot"></div>
+    <span id="statusText">Đang tải...</span>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:32px;">#</th>
+            <th>Họ tên</th>
+            <th>Trạm</th>
+            <th class="r">Chỉ số cũ</th>
+            <th class="r">Chỉ số mới</th>
+            <th class="r">Định mức</th>
+            <th class="r">Điện SX (kWh)</th>
+            <th class="r">Điện MDK (kWh)</th>
+            <th class="r">T.Tiền SX</th>
+            <th class="r">T.Tiền MDK</th>
+            <th class="r">Nợ cũ</th>
+            <th class="r">Thành Tiền</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="12" style="text-align:center;padding:32px;color:var(--muted);">Đang tải dữ liệu...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+  let allRecords = [], filtered = [], globalDien = {};
+  let modifiedRows = new Set();
+  const n = v => parseFloat(v) || 0;
+
+  function setStatus(s, t) {
+    document.getElementById('dot').className = 'dot' + (s==='ok'?' ok':s==='err'?' err':' loading');
+    document.getElementById('statusText').textContent = t;
+  }
+
+  async function init() {
+    setStatus('loading', 'Đang tải...');
+    try {
+      const [rows, dienRows] = await Promise.all([
+        gasGet('KhachHang'),
+        gasGet('Dien').catch(() => null)
+      ]);
+      allRecords = rows;
+      if (dienRows && dienRows.length > 0) {
+        const d = dienRows[0];
+        globalDien = { dien_sx: d.dien_sx, dien_mdk: d.dien_mdk, dinh_muc: d.dinh_muc };
+        localStorage.setItem('dien_global', JSON.stringify({ ...globalDien, savedAt: new Date().toLocaleString('vi-VN') }));
+      } else {
+        globalDien = JSON.parse(localStorage.getItem('dien_global') || '{}');
+      }
+      buildFilter();
+      applyFilter();
+      setStatus('ok', `Đã tải ${allRecords.length} khách hàng`);
+    } catch(e) {
+      globalDien = JSON.parse(localStorage.getItem('dien_global') || '{}');
+      setStatus('err', e.message);
+      toast(e.message, 'error');
+    }
+  }
+
+  function buildFilter() {
+    const trams = [...new Set(allRecords.map(r => r.Tram).filter(Boolean))].sort();
+    const sel = document.getElementById('filterTram');
+    trams.forEach(t => {
+      const o = document.createElement('option');
+      o.value = o.text = t;
+      sel.appendChild(o);
+    });
+  }
+
+  function applyFilter() {
+    const tram = document.getElementById('filterTram').value;
+    filtered = tram ? allRecords.filter(r => r.Tram === tram) : [...allRecords];
+    modifiedRows.clear();
+    renderTable();
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--muted);">Không có dữ liệu</td></tr>';
+      return;
+    }
+    tbody.innerHTML = filtered.map((r, i) => {
+      return `<tr id="row_${i}" data-orig-moi="${n(r.ChiSoMoi)}">
+        <td class="td-stt">${i + 1}</td>
+        <td class="td-name">${r.HoTen || '—'}</td>
+        <td class="td-tram">${r.Tram || '—'}</td>
+        <td class="r">
+          <input type="number" id="cu_${i}" value="${n(r.ChiSoCu)}" min="0" class="editable" oninput="onCuChange(${i})" onkeydown="nextOnEnter(event,'cu',${i})"/>
+        </td>
+        <td class="r">
+          <div>
+            <input type="number" id="moi_${i}" value="${n(r.ChiSoMoi)}" min="0" class="editable" oninput="onMoiChange(${i})" onkeydown="nextOnEnter(event,'moi',${i})"/>
+            <div class="warn-msg" id="warn_${i}"></div>
+          </div>
+        </td>
+        <td class="r">
+          <input type="number" id="dm_${i}" value="${n(r.DinhMuc)}" min="0" class="editable" oninput="onDmChange(${i})" onkeydown="nextOnEnter(event,'dm',${i})"/>
+        </td>
+        <td class="r">
+          <input type="number" id="dsx_${i}" value="${n(r.DienSXTieuThu)}" min="0" class="editable" oninput="onDsxChange(${i})" onkeydown="nextOnEnter(event,'dsx',${i})"/>
+        </td>
+        <td class="r"><input type="number" id="dmdk_${i}" value="0" disabled/></td>
+        <td class="r"><input type="number" id="ttsx_${i}" value="0" disabled/></td>
+        <td class="r"><input type="number" id="ttmdk_${i}" value="0" disabled/></td>
+        <td class="r"><input type="number" id="nocu_${i}" value="${n(r.NoCu)}" min="0" class="editable" oninput="onNoCuChange(${i})" onkeydown="nextOnEnter(event,'nocu',${i})"/></td>
+        <td class="r"><input type="number" id="tong_${i}" value="0" disabled/></td>
+        <td class="td-action">
+          <button class="btn-save-row" id="savebtn_${i}" onclick="saveRow(${i})">Lưu</button>
+        </td>
+      </tr>`;
+    }).join('');
+    // Tính lại tiền cho tất cả hàng sau khi render
+    filtered.forEach((_, i) => calcRowMoney(i));
+  }
+
+  // Gọi khi chỉ số mới thay đổi — DienSX là giá trị cố định do người dùng nhập
+  function calcRowFull(i) {
+    calcRowMoney(i);
+  }
+
+  // Gọi khi Điện SX thay đổi tay — giữ nguyên dsx, tính lại tiền
+  function calcRowMoney(i) {
+    const cu      = n(document.getElementById(`cu_${i}`).value);
+    const moi     = n(document.getElementById(`moi_${i}`).value);
+    const delta   = Math.max(0, moi - cu);
+    const dinhMucKH = n(document.getElementById(`dm_${i}`).value);
+    const dienSXDinhMuc = n(document.getElementById(`dsx_${i}`).value);
+    // Dùng định mức riêng của KH nếu có, không thì dùng Điện SX nhập tay
+    const dinhMucApDung = dinhMucKH > 0 ? dinhMucKH : dienSXDinhMuc;
+    // Thực tế SX = min(delta, định mức) — không tính vượt quá số điện thực dùng
+    const dienSXThucTe = Math.min(delta, dinhMucApDung);
+    const dienMDK = Math.max(0, delta - dinhMucApDung);
+    const giaSX   = n(globalDien.dien_sx);
+    const giaMDK  = n(globalDien.dien_mdk);
+    const ttSX    = dienSXThucTe * giaSX;
+    const ttMDK   = dienMDK * giaMDK;
+    const noCu    = n(document.getElementById(`nocu_${i}`).value);
+    const tong    = ttSX + ttMDK + noCu;
+
+    document.getElementById(`dmdk_${i}`).value  = dienMDK;
+    document.getElementById(`ttsx_${i}`).value  = ttSX;
+    document.getElementById(`ttmdk_${i}`).value = ttMDK;
+    document.getElementById(`tong_${i}`).value  = tong;
+  }
+
+  function markModified(i) {
+    modifiedRows.add(i);
+    document.getElementById(`row_${i}`).classList.add('modified');
+    document.getElementById(`row_${i}`).classList.remove('done');
+    const btn = document.getElementById(`savebtn_${i}`);
+    btn.className = 'btn-save-row';
+    btn.textContent = 'Lưu';
+  }
+
+  function onCuChange(i) {
+    markModified(i);
+    calcRowMoney(i);
+  }
+
+  function onMoiChange(i) {
+    const origMoi = n(document.getElementById(`row_${i}`).dataset.origMoi);
+    const moi = n(document.getElementById(`moi_${i}`).value);
+    // Nếu chỉ số mới khác origMoi và hợp lệ → tự fill chỉ số cũ
+    if (moi !== origMoi && moi > origMoi) {
+      document.getElementById(`cu_${i}`).value = origMoi;
+    }
+    validateAndCalc(i);
+  }
+
+  function validateAndCalc(i) {
+    const origMoi = n(document.getElementById(`row_${i}`).dataset.origMoi);
+    const moiVal  = document.getElementById(`moi_${i}`).value;
+    const inp     = document.getElementById(`moi_${i}`);
+    const warn    = document.getElementById(`warn_${i}`);
+
+    if (moiVal === '') {
+      inp.classList.remove('warn');
+      warn.textContent = '';
+      return;
+    }
+
+    const moi = n(moiVal);
+    if (moi === origMoi) {
+      inp.classList.add('warn');
+      warn.textContent = 'Chỉ số mới bằng chỉ số cũ!';
+      return;
+    }
+    if (moi < origMoi) {
+      inp.classList.add('warn');
+      warn.textContent = 'Chỉ số mới nhỏ hơn chỉ số cũ!';
+      return;
+    }
+
+    inp.classList.remove('warn');
+    warn.textContent = '';
+    markModified(i);
+    // Tự fill chỉ số cũ = origMoi (chỉ số mới kỳ trước)
+    document.getElementById(`cu_${i}`).value = origMoi;
+    calcRowFull(i);
+  }
+
+  function onDsxChange(i) {
+    markModified(i);
+    calcRowMoney(i);
+  }
+
+  function onDmChange(i) {
+    markModified(i);
+    calcRowMoney(i);
+  }
+
+  function nextOnEnter(e, type, i) {
+    if (e.key !== 'Enter') return;
+    // Với chỉ số mới: chỉ xuống dòng khi giá trị hợp lệ
+    if (type === 'moi') {
+      const cu  = n(document.getElementById(`cu_${i}`).value);
+      const moi = n(document.getElementById(`moi_${i}`).value);
+      if (moi <= cu) return;
+    }
+    e.preventDefault();
+    const next = document.getElementById(`${type}_${i + 1}`);
+    if (next) { next.focus(); next.select(); }
+  }
+
+  function onNoCuChange(i) {
+    markModified(i);
+    calcRowMoney(i);
+  }
+
+  async function saveRow(i) {
+    const r = filtered[i];
+    const chiSoCuInput = n(document.getElementById(`cu_${i}`).value);
+    const chiSoMoi     = n(document.getElementById(`moi_${i}`).value);
+
+    if (!chiSoMoi) { toast('Vui lòng nhập chỉ số mới!', 'error'); return; }
+    if (chiSoMoi <= chiSoCuInput) { toast('Chỉ số mới phải lớn hơn chỉ số cũ!', 'error'); return; }
+
+    // ChiSoCu lưu = ChiSoMoi cũ trước khi sửa (rollover kỳ)
+    const origMoi = n(document.getElementById(`row_${i}`).dataset.origMoi);
+    const chiSoCu = origMoi || chiSoCuInput;
+
+    const dienSX   = n(document.getElementById(`dsx_${i}`).value);
+    const dienMDK  = n(document.getElementById(`dmdk_${i}`).value);
+    const ttSX     = n(document.getElementById(`ttsx_${i}`).value);
+    const ttMDK    = n(document.getElementById(`ttmdk_${i}`).value);
+    const noCu     = n(document.getElementById(`nocu_${i}`).value);
+    const tong     = n(document.getElementById(`tong_${i}`).value);
+    const congTien = ttSX + ttMDK;
+    const dinhMuc  = n(document.getElementById(`dm_${i}`).value);
+    const soDienTieuThu = Math.max(0, chiSoMoi - chiSoCu);
+
+    const btn = document.getElementById(`savebtn_${i}`);
+    btn.className = 'btn-save-row saving';
+    btn.textContent = '...';
+
+    try {
+      await gasPost({
+        sheet: 'KhachHang', action: 'update', row: r.row,
+        MaKH: r.MaKH, HoTen: r.HoTen,
+        ChiSoCu: chiSoCu, ChiSoMoi: chiSoMoi,
+        DienSXTieuThu: dienSX, DienMDKTieuThu: dienMDK,
+        ThanhTienSX: ttSX, ThanhTienMDK: ttMDK,
+        NoCu: noCu, CongTien: congTien, TongCong: tong,
+        Thon: r.Thon, Tram: r.Tram, DiaChi: r.DiaChi,
+        SoCongTo: r.SoCongTo, SoDienTieuThu: soDienTieuThu,
+        SoDT: r.SoDT, Zalo: r.Zalo,
+        NgayCapNhat: new Date().toISOString().slice(0, 10),
+        DinhMuc: dinhMuc
+      });
+
+      // Cập nhật bản ghi local + reset data-orig-moi cho kỳ tiếp theo
+      filtered[i] = { ...r, ChiSoCu: chiSoCu, ChiSoMoi: chiSoMoi };
+      const ai = allRecords.findIndex(x => x.row === r.row);
+      if (ai >= 0) allRecords[ai] = filtered[i];
+      document.getElementById(`cu_${i}`).value = chiSoCu;
+      document.getElementById(`row_${i}`).dataset.origMoi = chiSoMoi;
+
+      modifiedRows.delete(i);
+      document.getElementById(`row_${i}`).classList.remove('modified');
+      document.getElementById(`row_${i}`).classList.add('done');
+      btn.className = 'btn-save-row saved';
+      btn.textContent = '✓ Đã lưu';
+      toast(`Đã lưu: ${r.HoTen}`, 'success');
+    } catch(e) {
+      btn.className = 'btn-save-row';
+      btn.textContent = 'Lưu';
+      toast('Lỗi: ' + e.message, 'error');
+    }
+  }
+
+  async function saveAll() {
+    const valid = [...modifiedRows].filter(i => {
+      const cu  = n(document.getElementById(`cu_${i}`).value);
+      const moi = n(document.getElementById(`moi_${i}`).value);
+      return moi > cu;
+    });
+    if (!valid.length) {
+      toast('Không có hàng nào hợp lệ để lưu!', 'info');
+      return;
+    }
+
+    const total = valid.length;
+    let done = 0, errors = [];
+
+    // Hiện modal
+    document.getElementById('progressOverlay').classList.remove('hidden');
+    document.getElementById('progressTitle').textContent = `Đang lưu ${total} khách hàng...`;
+    document.getElementById('progressSub').textContent = 'Vui lòng đợi, đừng đóng trang';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressLabel').textContent = `0 / ${total}`;
+    document.getElementById('progressDone').classList.add('hidden');
+    document.getElementById('progressErrors').classList.add('hidden');
+    document.getElementById('btnCloseModal').classList.add('hidden');
+
+    for (const i of valid) {
+      try {
+        await saveRow(i);
+        done++;
+      } catch(e) {
+        errors.push(filtered[i]?.HoTen || `Hàng ${i+1}`);
+        done++;
+      }
+      const pct = Math.round(done / total * 100);
+      document.getElementById('progressFill').style.width = pct + '%';
+      document.getElementById('progressLabel').textContent = `${done} / ${total}`;
+    }
+
+    // Hoàn thành
+    const ok = total - errors.length;
+    document.getElementById('progressTitle').textContent = 'Hoàn tất!';
+    document.getElementById('progressSub').textContent = '';
+    const doneEl = document.getElementById('progressDone');
+    doneEl.textContent = `✓ Đã lưu thành công ${ok} / ${total} khách hàng`;
+    doneEl.classList.remove('hidden');
+    if (errors.length) {
+      const errEl = document.getElementById('progressErrors');
+      errEl.textContent = `Lỗi: ${errors.join(', ')}`;
+      errEl.classList.remove('hidden');
+    }
+    document.getElementById('btnCloseModal').classList.remove('hidden');
+  }
+
+  function closeProgress() {
+    document.getElementById('progressOverlay').classList.add('hidden');
+  }
+
+  function toast(msg, type = 'info') {
+    const icons = { success: '✓', error: '✕', info: 'ℹ' };
+    const wrap = document.getElementById('toastWrap');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<span>${icons[type]}</span><span>${msg}</span>`;
+    wrap.appendChild(t);
+    setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 280); }, 2800);
+  }
+
+  function toggleHD() {
+    const hd = !document.body.classList.contains('mode-hd');
+    document.body.classList.toggle('mode-hd', hd);
+    document.getElementById('btnModeHD').classList.toggle('active', hd);
+    localStorage.setItem('nhap_hd', hd ? '1' : '');
+  }
+
+  if (localStorage.getItem('nhap_hd')) {
+    document.body.classList.add('mode-hd');
+    document.getElementById('btnModeHD').classList.add('active');
+  }
+
+  init();
+</script>
+</body>
+</html>

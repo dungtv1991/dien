@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quản Lý Thôn / Buôn</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    :root{--primary:#7c3aed;--primary-light:#f5f3ff;--primary-dark:#6d28d9;--bg:#f1f5f9;--surface:#fff;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--danger:#dc2626;--success:#16a34a;--warn:#d97706;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',Arial,sans-serif;font-size:14px;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    .app-header{background:linear-gradient(135deg,#3b0764 0%,#7c3aed 60%,#a78bfa 100%);color:#fff;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(124,58,237,.35);}
+    .app-header h1{font-size:18px;font-weight:700;}
+    .app-header .sub{font-size:12px;opacity:.75;margin-top:2px;}
+    .btn-home{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s;}
+    .btn-home:hover{background:rgba(255,255,255,.3);}
+
+    .app-body{max-width:680px;margin:28px auto;padding:0 16px;}
+
+    /* Status */
+    .status-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:16px;}
+    .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;}
+    .dot.ok{background:var(--success);}
+    .dot.err{background:var(--danger);}
+    .dot.loading{background:var(--warn);animation:pulse 1s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+    .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px;}
+    .card-header{background:linear-gradient(90deg,var(--primary),#a78bfa);padding:13px 20px;}
+    .card-header h2{color:#fff;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+    .card-body{padding:20px;}
+
+    .input-row{display:flex;gap:10px;align-items:flex-end;}
+    .field{display:flex;flex-direction:column;gap:5px;flex:1;}
+    .field label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+    .field input{border:1.5px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13.5px;outline:none;transition:border .2s,box-shadow .2s;width:100%;}
+    .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,58,237,.12);}
+    .field-sm{flex:0 0 110px;}
+
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:background .15s,transform .1s;white-space:nowrap;}
+    .btn:active{transform:scale(.96);}
+    .btn-add{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(124,58,237,.3);}
+    .btn-add:hover{background:var(--primary-dark);}
+    .btn-save{background:var(--success);color:#fff;}
+    .btn-save:hover{background:#15803d;}
+    .btn-del{background:#fee2e2;color:var(--danger);}
+    .btn-del:hover{background:#fecaca;}
+    .btn-sm{padding:5px 11px;font-size:12px;border-radius:6px;}
+
+    .list-item{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background .12s;}
+    .list-item:last-child{border-bottom:none;}
+    .list-item:hover{background:var(--primary-light);}
+    .item-num{width:28px;height:28px;border-radius:50%;background:var(--primary-light);color:var(--primary);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .item-code{font-size:12px;color:var(--muted);font-weight:600;min-width:60px;}
+    .item-name{flex:1;font-weight:600;}
+    .edit-input{flex:1;border:1.5px solid var(--primary);border-radius:7px;padding:6px 10px;font-size:13px;outline:none;}
+    .edit-code{width:90px;border:1.5px solid var(--primary);border-radius:7px;padding:6px 10px;font-size:13px;outline:none;}
+    .actions{display:flex;gap:6px;flex-shrink:0;}
+
+    .empty{text-align:center;padding:36px;color:var(--muted);font-size:13px;}
+
+    .toast-wrap{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+    .toast{min-width:230px;padding:11px 16px;border-radius:9px;font-size:13px;font-weight:600;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;animation:sIn .25s ease;}
+    .toast.success{background:var(--success);}
+    .toast.error{background:var(--danger);}
+    @keyframes sIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    @keyframes sOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(120%);opacity:0;}}
+    .toast.hide{animation:sOut .25s ease forwards;}
+  </style>
+</head>
+<body>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="app-header">
+  <div><h1>🏘️ Quản Lý Thôn / Buôn</h1><div class="sub">Thêm, sửa, xóa danh sách thôn — đồng bộ Google Sheets</div></div>
+  <a class="btn-home" href="index.html">⌂ Trang chủ</a>
+</div>
+
+<div class="app-body">
+  <div class="status-bar"><div class="dot" id="dot"></div><span id="statusText">Đang tải...</span></div>
+
+  <div class="card">
+    <div class="card-header"><h2>➕ Thêm Thôn / Buôn Mới</h2></div>
+    <div class="card-body">
+      <div class="input-row">
+        <div class="field field-sm"><label>Mã thôn</label><input type="text" id="inputMa" placeholder="VD: T01"/></div>
+        <div class="field"><label>Tên thôn / buôn</label><input type="text" id="inputTen" placeholder="Nhập tên thôn, buôn..."/></div>
+        <button class="btn btn-add" onclick="addItem()">+ Thêm</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h2>📋 Danh Sách Thôn / Buôn (<span id="countBadge">0</span>)</h2></div>
+    <div class="card-body" style="padding:0;"><div id="listWrap"></div></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+  let items = []; // [{row, ma_thon, ten_thon}]
+  let editingIdx = null;
+
+  function setStatus(state, text) {
+    const d = document.getElementById('dot');
+    d.className = 'dot'+(state==='ok'?' ok':state==='err'?' err':' loading');
+    document.getElementById('statusText').textContent = text;
+  }
+
+  async function loadData() {
+    setStatus('loading','Đang tải từ Google Sheets...');
+    try {
+      items = await gasGet('Thon');
+      // Sync to localStorage for other pages
+      localStorage.setItem('dien_thon', JSON.stringify(items.map(i=>i.ten_thon)));
+      setStatus('ok',`Đã tải ${items.length} thôn`);
+    } catch(e) {
+      // Fallback localStorage
+      const local = JSON.parse(localStorage.getItem('dien_thon') || '[]');
+      items = local.map((t,i)=>({row:i+2, ma_thon:`T${String(i+1).padStart(2,'0')}`, ten_thon:t}));
+      setStatus('err','GAS không kết nối – dùng dữ liệu cục bộ');
+    }
+    render();
+  }
+
+  function render() {
+    document.getElementById('countBadge').textContent = items.length;
+    const wrap = document.getElementById('listWrap');
+    if (!items.length) { wrap.innerHTML='<div class="empty">Chưa có thôn nào. Hãy thêm mới.</div>'; return; }
+    wrap.innerHTML = items.map((it,i) => {
+      if (editingIdx === i) {
+        return `<div class="list-item">
+          <div class="item-num">${i+1}</div>
+          <input class="edit-code" id="eCode" value="${it.ma_thon}"/>
+          <input class="edit-input" id="eName" value="${it.ten_thon}"/>
+          <div class="actions">
+            <button class="btn btn-save btn-sm" onclick="saveEdit(${i})">💾 Lưu</button>
+            <button class="btn btn-del btn-sm" onclick="cancelEdit()">Huỷ</button>
+          </div>
+        </div>`;
+      }
+      return `<div class="list-item">
+        <div class="item-num">${i+1}</div>
+        <span class="item-code">${it.ma_thon}</span>
+        <span class="item-name">${it.ten_thon}</span>
+        <div class="actions">
+          <button class="btn btn-sm" style="background:#ede9fe;color:#6d28d9;border:none;" onclick="startEdit(${i})">✏️</button>
+          <button class="btn btn-del btn-sm" onclick="deleteItem(${i})">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function addItem() {
+    const ma  = document.getElementById('inputMa').value.trim();
+    const ten = document.getElementById('inputTen').value.trim();
+    if (!ten) { toast('Vui lòng nhập tên thôn!','error'); return; }
+    if (!ma)  { toast('Vui lòng nhập mã thôn!','error'); return; }
+    if (items.find(i=>i.ma_thon===ma)) { toast('Mã thôn đã tồn tại!','error'); return; }
+
+    setStatus('loading','Đang lưu...');
+    try {
+      await gasPost({ sheet:'Thon', action:'insert', ma_thon:ma, ten_thon:ten });
+      toast('Đã thêm thôn: '+ten,'success');
+      document.getElementById('inputMa').value = '';
+      document.getElementById('inputTen').value = '';
+      items.push({ row: 9999, ma_thon: ma, ten_thon: ten });
+      localStorage.setItem('dien_thon', JSON.stringify(items.map(i=>i.ten_thon)));
+      setStatus('ok', `Đã tải ${items.length} thôn`);
+      render();
+      loadData();
+    } catch(e) { setStatus('err',e.message); toast(e.message,'error'); }
+  }
+
+  function startEdit(i) { editingIdx=i; render(); setTimeout(()=>document.getElementById('eCode')?.focus(),30); }
+  function cancelEdit() { editingIdx=null; render(); }
+
+  async function saveEdit(i) {
+    const ma  = document.getElementById('eCode').value.trim();
+    const ten = document.getElementById('eName').value.trim();
+    if (!ten||!ma) { toast('Mã và tên không được để trống!','error'); return; }
+
+    setStatus('loading','Đang cập nhật...');
+    try {
+      await gasPost({ sheet:'Thon', action:'update', row:items[i].row, ma_thon:ma, ten_thon:ten });
+      toast('Đã cập nhật!','success');
+      editingIdx=null;
+      await loadData();
+    } catch(e) { setStatus('err',e.message); toast(e.message,'error'); }
+  }
+
+  async function deleteItem(i) {
+    if (!confirm(`Xóa thôn "${items[i].ten_thon}"?`)) return;
+    setStatus('loading','Đang xóa...');
+    try {
+      await gasPost({ sheet:'Thon', action:'delete', row:items[i].row });
+      toast('Đã xóa thôn.','error');
+      editingIdx=null;
+      await loadData();
+    } catch(e) { setStatus('err',e.message); toast(e.message,'error'); }
+  }
+
+  document.getElementById('inputTen').addEventListener('keydown',e=>{ if(e.key==='Enter') addItem(); });
+
+  function toast(msg, type='success') {
+    const wrap=document.getElementById('toastWrap');
+    const t=document.createElement('div');
+    t.className=`toast ${type}`;
+    t.innerHTML=`<span>${type==='success'?'✓':'✕'}</span><span>${msg}</span>`;
+    wrap.appendChild(t);
+    setTimeout(()=>{ t.classList.add('hide'); setTimeout(()=>t.remove(),280); },2500);
+  }
+
+  loadData();
+</script>
+</body>
+</html>

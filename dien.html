@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dữ Liệu Về Điện</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    :root {
+      --primary:#16a34a; --primary-light:#f0fdf4; --primary-dark:#15803d;
+      --bg:#f1f5f9; --surface:#fff; --border:#e2e8f0;
+      --text:#0f172a; --muted:#64748b; --danger:#dc2626; --warn:#d97706;
+      --radius:12px; --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',Arial,sans-serif;font-size:14px;background:var(--bg);color:var(--text);min-height:100vh;}
+
+    .app-header{background:linear-gradient(135deg,#064e3b 0%,#16a34a 60%,#059669 100%);color:#fff;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(22,163,74,.3);}
+    .app-header h1{font-size:18px;font-weight:700;}
+    .app-header .sub{font-size:12px;opacity:.75;margin-top:2px;}
+    .btn-home{background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:background .15s;}
+    .btn-home:hover{background:rgba(255,255,255,.3);}
+
+    .app-body{max-width:720px;margin:32px auto;padding:0 16px;}
+
+    /* Status */
+    .status-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:16px;}
+    .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;}
+    .dot.ok{background:var(--primary);}
+    .dot.err{background:var(--danger);}
+    .dot.loading{background:var(--warn);animation:pulse 1s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+    /* Info note */
+    .info-note{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px 18px;display:flex;gap:12px;align-items:flex-start;margin-bottom:24px;font-size:13px;color:#1e40af;line-height:1.6;}
+
+    /* Section label */
+    .section-label{display:flex;align-items:center;gap:10px;margin-bottom:16px;color:var(--primary);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.6px;}
+    .section-label::after{content:'';flex:1;height:1.5px;background:linear-gradient(90deg,var(--primary-light),transparent);border-radius:2px;}
+
+    /* Cards grid */
+    .dien-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px;}
+    .dien-block{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:22px 20px;box-shadow:var(--shadow);}
+    .dien-block-title{font-size:13px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+    .fields-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+    .field{display:flex;flex-direction:column;gap:6px;}
+    .field label{font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+    .field input{border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:15px;font-weight:500;outline:none;transition:border .2s,box-shadow .2s;width:100%;}
+    .field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(22,163,74,.12);}
+
+    /* Định mức block (full width) */
+    .dinh-muc-block{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:22px 20px;box-shadow:var(--shadow);margin-bottom:20px;}
+
+    /* Actions */
+    .action-bar{display:flex;gap:12px;justify-content:flex-end;}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:background .15s,transform .1s;}
+    .btn:active{transform:scale(.96);}
+    .btn-primary{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,.28);}
+    .btn-primary:hover{background:var(--primary-dark);}
+    .btn-ghost{background:var(--surface);color:var(--muted);border:1.5px solid var(--border);}
+    .btn-ghost:hover{background:#f8fafc;}
+
+    .saved-at{font-size:12px;color:var(--muted);text-align:right;margin-top:8px;}
+
+    /* Toast */
+    .toast-wrap{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+    .toast{min-width:230px;padding:11px 16px;border-radius:9px;font-size:13px;font-weight:600;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);display:flex;align-items:center;gap:10px;animation:sIn .25s ease;}
+    .toast.success{background:var(--primary);}
+    .toast.error{background:var(--danger);}
+    @keyframes sIn{from{transform:translateX(120%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+    @keyframes sOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(120%);opacity:0;}}
+    .toast.hide{animation:sOut .25s ease forwards;}
+
+    @media(max-width:540px){.dien-grid{grid-template-columns:1fr;}.fields-row{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="app-header">
+  <div>
+    <h1>⚡ Dữ Liệu Về Điện</h1>
+    <div class="sub">Cài đặt định mức và đơn giá áp dụng toàn hệ thống</div>
+  </div>
+  <a class="btn-home" href="index.html">⌂ Trang chủ</a>
+</div>
+
+<div class="app-body">
+  <div class="status-bar"><div class="dot" id="dot"></div><span id="statusText">Đang tải...</span></div>
+
+  <div class="info-note">
+    <span style="font-size:18px;flex-shrink:0;">ℹ️</span>
+    <span>Các giá trị tại đây được lưu vào Google Sheets (sheet <strong>Dien</strong>) và tự động điền vào phần tính tiền của mỗi khách hàng.</span>
+  </div>
+
+  <div class="section-label">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    Đơn Giá Điện
+  </div>
+
+  <div class="dien-grid">
+    <div class="dien-block">
+      <div class="dien-block-title">Sản xuất</div>
+      <div class="field">
+        <label>Đơn giá SX (đ/kWh)</label>
+        <input type="number" id="dien_sx" placeholder="0" min="0"/>
+      </div>
+    </div>
+    <div class="dien-block">
+      <div class="dien-block-title">MDK (Ngoài định mức)</div>
+      <div class="field">
+        <label>Đơn giá MDK (đ/kWh)</label>
+        <input type="number" id="dien_mdk" placeholder="0" min="0"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-ghost" onclick="resetForm()">↺ Đặt lại</button>
+    <button class="btn btn-primary" onclick="saveData()">💾 Lưu lên Google Sheets</button>
+  </div>
+  <div class="saved-at" id="savedAt"></div>
+</div>
+
+<script src="config.js"></script>
+<script>
+  let gasRow = null; // row number trong Dien sheet (nếu đã có)
+
+  function setStatus(state, text) {
+    const d = document.getElementById('dot');
+    d.className = 'dot' + (state==='ok'?' ok':state==='err'?' err':' loading');
+    document.getElementById('statusText').textContent = text;
+  }
+
+  async function loadData() {
+    setStatus('loading','Đang tải từ Google Sheets...');
+    try {
+      const rows = await gasGet('Dien');
+      if (rows && rows.length > 0) {
+        const r = rows[0];
+        gasRow = r.row;
+        document.getElementById('dien_sx').value  = r.dien_sx  || 0;
+        document.getElementById('dien_mdk').value = r.dien_mdk || 0;
+        syncLocal(r.dien_sx, r.dien_mdk);
+      }
+      setStatus('ok','Đã tải xong');
+    } catch(e) {
+      // Fallback: đọc localStorage
+      const saved = JSON.parse(localStorage.getItem('dien_global') || '{}');
+      if (saved.gasRow) gasRow = saved.gasRow;
+      document.getElementById('dien_sx').value  = saved.dien_sx  || 0;
+      document.getElementById('dien_mdk').value = saved.dien_mdk || 0;
+      setStatus('err', 'Không kết nối được GAS – hiển thị dữ liệu cục bộ');
+    }
+    const saved = JSON.parse(localStorage.getItem('dien_global') || '{}');
+    if (saved.savedAt) document.getElementById('savedAt').textContent = 'Đã lưu lúc: ' + saved.savedAt;
+  }
+
+  function syncLocal(sx, mdk) {
+    localStorage.removeItem('dien_global');
+    localStorage.setItem('dien_global', JSON.stringify({
+      dien_sx: parseFloat(sx)||0,
+      dien_mdk: parseFloat(mdk)||0,
+      dinh_muc: 0,
+      savedAt: new Date().toLocaleString('vi-VN'),
+      gasRow: gasRow
+    }));
+  }
+
+  async function saveData() {
+    const sx  = parseFloat(document.getElementById('dien_sx').value)  || 0;
+    const mdk = parseFloat(document.getElementById('dien_mdk').value) || 0;
+
+    syncLocal(sx, mdk);
+    document.getElementById('savedAt').textContent = 'Đã lưu lúc: ' + new Date().toLocaleString('vi-VN');
+
+    setStatus('loading','Đang lưu lên Google Sheets...');
+    try {
+      const payload = { sheet:'Dien', dien_sx:sx, dien_mdk:mdk };
+      if (gasRow) {
+        await gasPost({ ...payload, action:'update', row:gasRow });
+      } else {
+        await gasPost({ ...payload, action:'insert' });
+        const rows = await gasGet('Dien');
+        if (rows && rows.length > 0) {
+          gasRow = rows[0].row;
+          syncLocal(sx, mdk, dm);
+        }
+      }
+      setStatus('ok','Đã lưu lên Google Sheets!');
+      toast('Đã lưu! Tự động áp dụng cho toàn hệ thống.', 'success');
+    } catch(e) {
+      setStatus('err', 'Lưu cục bộ OK, lưu GAS thất bại: ' + e.message);
+      toast('Đã lưu cục bộ. GAS: ' + e.message, 'error');
+    }
+  }
+
+  function resetForm() {
+    if (!confirm('Đặt lại về 0?')) return;
+    ['dien_sx','dien_mdk'].forEach(id => document.getElementById(id).value = 0);
+    document.getElementById('savedAt').textContent = '';
+  }
+
+  function toast(msg, type='success') {
+    const wrap = document.getElementById('toastWrap');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.innerHTML = `<span>${type==='success'?'✓':'✕'}</span><span>${msg}</span>`;
+    wrap.appendChild(t);
+    setTimeout(()=>{ t.classList.add('hide'); setTimeout(()=>t.remove(),280); }, 2800);
+  }
+
+  loadData();
+</script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trang Chủ — Quản Lý Điện</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --radius: 16px;
+      --shadow: 0 2px 8px rgba(0,0,0,.07), 0 8px 28px rgba(0,0,0,.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      color: var(--text);
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #2563eb 100%);
+      padding: 36px 32px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(14,165,233,.25) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .header-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      display: block;
+      filter: drop-shadow(0 4px 12px rgba(14,165,233,.5));
+    }
+    .header h1 {
+      color: #fff;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: .3px;
+    }
+    .header p {
+      color: rgba(255,255,255,.65);
+      margin-top: 6px;
+      font-size: 14px;
+    }
+
+    /* ── Grid ── */
+    .grid-wrap {
+      max-width: 860px;
+      margin: -48px auto 40px;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      border: 1.5px solid transparent;
+      transition: transform .18s, box-shadow .18s, border-color .18s;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06);
+      border-color: var(--border);
+    }
+
+    /* Color variants */
+    .card.blue   { --c1: #2563eb; --c2: #0ea5e9; }
+    .card.green  { --c1: #16a34a; --c2: #059669; }
+    .card.orange { --c1: #d97706; --c2: #f59e0b; }
+    .card.purple { --c1: #7c3aed; --c2: #a78bfa; }
+    .card.red    { --c1: #dc2626; --c2: #f87171; }
+
+    .card::before { background: linear-gradient(90deg, var(--c1), var(--c2)); }
+
+    .card-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      background: linear-gradient(135deg, var(--c1), var(--c2));
+      box-shadow: 0 4px 14px rgba(0,0,0,.18);
+      flex-shrink: 0;
+    }
+
+    .card-info h2 {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .card-info p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    .card-arrow {
+      position: absolute;
+      right: 22px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--border);
+      font-size: 20px;
+      transition: color .18s, right .18s;
+    }
+    .card:hover .card-arrow { color: var(--c1); right: 18px; }
+
+    /* Stats row */
+    .stats-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .stat-chip {
+      background: #f1f5f9;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .stat-chip span {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 16px;
+    }
+
+    @media (max-width: 540px) {
+      .grid-wrap { grid-template-columns: 1fr; }
+      .header h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-icon">⚡</span>
+  <h1>Hệ Thống Quản Lý Điện</h1>
+  <p>Chọn chức năng bên dưới để bắt đầu</p>
+</div>
+
+<div class="grid-wrap">
+
+  <!-- 1. Khách hàng -->
+  <a class="card blue" href="khachhang.html">
+    <div class="card-icon">👤</div>
+    <div class="card-info">
+      <h2>Khách Hàng</h2>
+      <p>Nhập và quản lý thông tin từng khách hàng sử dụng điện.</p>
+      <div class="stats-row">
+        <div class="stat-chip">Tổng: <span id="statKH">0</span></div>
+      </div>
+    </div>
+    <span class="card-arrow">›</span>
+  </a>
+
+  <!-- 2. Dữ liệu điện -->
+  <a class="card green" href="dien.html">
+    <div class="card-icon">⚡</div>
+    <div class="card-info">
+      <h2>Dữ Liệu Về Điện</h2>
+      <p>Quản lý định mức và đơn giá điện theo từng khách hàng.</p>
+      <div class="stats-row">
+        <div class="stat-chip">Bản ghi: <span id="statDien">0</span></div>
+      </div>
+    </div>
+    <span class="card-arrow">›</span>
+  </a>
+
+  <!-- 3. Quản lý Trạm -->
+  <a class="card orange" href="tram.html">
+    <div class="card-icon">🏭</div>
+    <div class="card-info">
+      <h2>Quản Lý Trạm</h2>
+      <p>Thêm, sửa, xóa danh sách các trạm điện trong hệ thống.</p>
+      <div class="stats-row">
+        <div class="stat-chip">Trạm: <span id="statTram">0</span></div>
+      </div>
+    </div>
+    <span class="card-arrow">›</span>
+  </a>
+
+  <!-- 4. Nhập chỉ số mới -->
+  <a class="card purple" href="nhapchiso.html">
+    <div class="card-icon">📝</div>
+    <div class="card-info">
+      <h2>Nhập Chỉ Số Mới</h2>
+      <p>Cập nhật chỉ số công tơ tháng mới cho toàn bộ khách hàng.</p>
+      <div class="stats-row">
+        <div class="stat-chip">Nhập hàng loạt</div>
+      </div>
+    </div>
+    <span class="card-arrow">›</span>
+  </a>
+
+  <!-- 5. In phiếu thu -->
+  <a class="card red" href="in.html">
+    <div class="card-icon">🖨️</div>
+    <div class="card-info">
+      <h2>In Phiếu Thu</h2>
+      <p>In danh sách hoặc phiếu thu tiền điện từng khách hàng.</p>
+      <div class="stats-row">
+        <div class="stat-chip">In danh sách</div>
+        <div class="stat-chip">In từng người</div>
+      </div>
+    </div>
+    <span class="card-arrow">›</span>
+  </a>
+
+  <!-- 6. Quyết toán -->
+  <a class="card" href="quyettoan.html" style="--c1:#0891b2;--c2:#22d3ee;">
+    <div class="card-icon">🔄</div>
+    <div class="card-info">
+      <h2>Quyết Toán</h2>
+      <p>Chốt kỳ: chuyển chỉ số mới thành cũ, đưa tiền về 0, cập nhật nợ kỳ mới.</p>
+      <div class="stats-row">
+        <div class="stat-chip">Chốt kỳ</div>
+        <div class="stat-chip">Cập nhật nợ</div>
+      </div>
+    </div>
+    <span class="card-arrow">›</span>
+  </a>
+
+
+</div>
+
+<div class="footer">Hệ thống quản lý điện &copy; 2025</div>
+
+<script src="config.js"></script>
+<script>
+  async function loadStats() {
+    try {
+      const kh = await gasGet('KhachHang');
+      document.getElementById('statKH').textContent   = kh.length;
+      document.getElementById('statDien').textContent = kh.length;
+    } catch {
+      document.getElementById('statKH').textContent   = 0;
+      document.getElementById('statDien').textContent = 0;
+    }
+    try {
+      const tram = await gasGet('Tram');
+      document.getElementById('statTram').textContent = tram.length;
+    } catch {
+      document.getElementById('statTram').textContent = (JSON.parse(localStorage.getItem('dien_tram')||'[]')).length || '—';
+    }
+  }
+  loadStats();
+</script>
+</body>
+</html>
