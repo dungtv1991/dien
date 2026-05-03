@@ -1,6 +1,6 @@
 // ── Thay SPREADSHEET_ID bằng ID thật của Google Sheets ──
 // Lấy từ URL: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
-var SPREADSHEET_ID = ''; // ← điền ID vào đây
+var SPREADSHEET_ID = '1IYYg4Q9AlcBIEYy8lk6i5jXtvtSE0QE5ULv59-THU7I'; // ← điền ID vào đây
 
 function getSpreadsheet() {
   return SPREADSHEET_ID
@@ -44,7 +44,9 @@ function doGet(e) {
         SoDT:              row[16],
         Zalo:              row[17],
         NgayCapNhat:       row[18],
-        DinhMuc:           row[19]
+        DinhMuc:           row[19],
+        DienSXRieng:       row[20],
+        DienMDKRieng:      row[21]
       });
     } else if (sheetName === "Thon") {
       result.push({ row: i + 1, ma_thon: row[0], ten_thon: row[1] });
@@ -85,7 +87,9 @@ function doPost(e) {
         requestData.Tram,           requestData.DiaChi,
         requestData.SoCongTo,       requestData.SoDienTieuThu,
         requestData.SoDT,           requestData.Zalo,
-        requestData.NgayCapNhat,    requestData.DinhMuc
+        requestData.NgayCapNhat,    requestData.DinhMuc,
+        requestData.DienSXRieng !== undefined ? requestData.DienSXRieng : '',
+        requestData.DienMDKRieng !== undefined ? requestData.DienMDKRieng : ''
       ];
       if (requestData.action === "insert") {
         sheet.appendRow(khRow);

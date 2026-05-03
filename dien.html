@@ -68,6 +68,20 @@
     .btn-sm-reset:hover{background:#fecaca;}
     .tram-badge{display:inline-block;background:var(--primary-light);color:var(--primary);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;}
 
+    /* Giá riêng KH */
+    .kh-search-wrap{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;}
+    .kh-search-wrap input{flex:1;border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;outline:none;transition:border .2s;}
+    .kh-search-wrap input:focus{border-color:var(--primary);}
+    .kh-table{width:100%;border-collapse:collapse;font-size:13px;}
+    .kh-table th{padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);}
+    .kh-table th.r,.kh-table td.r{text-align:right;}
+    .kh-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    .kh-table tr:last-child td{border-bottom:none;}
+    .kh-table input[type=number]{border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;width:110px;outline:none;text-align:right;transition:border .2s;}
+    .kh-table input[type=number]:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(22,163,74,.12);}
+    .kh-table input.custom{border-color:#86efac;background:#f0fdf4;}
+    .kh-tram-tag{font-size:11px;color:var(--muted);margin-left:4px;}
+
     /* Actions */
     .action-bar{display:flex;gap:12px;justify-content:flex-end;}
     .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:background .15s,transform .1s;}
@@ -164,13 +178,49 @@
       </table>
     </div>
   </div>
+
+  <!-- Giá điện riêng theo khách hàng -->
+  <div style="margin-top:32px;">
+    <div class="section-label">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Giá Điện Riêng Theo Khách Hàng
+    </div>
+    <div class="info-note" style="margin-bottom:16px;">
+      <span style="font-size:18px;flex-shrink:0;">💡</span>
+      <span>Nếu khách hàng có giá riêng, hệ thống sẽ dùng giá đó. Ưu tiên: <strong>Giá KH → Giá Trạm → Giá Chung</strong>. Để trống = dùng giá trạm/chung.</span>
+    </div>
+    <div class="dien-block" style="padding:0;overflow:hidden;">
+      <div class="kh-search-wrap">
+        <input type="text" id="khSearch" placeholder="Tìm theo tên hoặc mã KH..." oninput="renderKHTable()"/>
+        <select id="khFilterTram" onchange="renderKHTable()" style="border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;outline:none;background:#fff;">
+          <option value="">Tất cả trạm</option>
+        </select>
+      </div>
+      <div style="max-height:420px;overflow-y:auto;">
+        <table class="kh-table">
+          <thead>
+            <tr>
+              <th>Họ tên</th>
+              <th>Trạm</th>
+              <th class="r">Giá SX riêng (đ/kWh)</th>
+              <th class="r">Giá MDK riêng (đ/kWh)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="khTableBody">
+            <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">Đang tải...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
-<script src="config.js"></script>
-<script>
-  let gasRow = null; // row number trong Dien sheet (nếu đã có)
+<script src="config.js"></script><script>
+  let gasRow = null;
   let allTrams = [];
-  let dienTramMap = {}; // { ten_tram: { dien_sx, dien_mdk, row } }
+  let dienTramMap = {};
+  let allKH = [];
 
   function setStatus(state, text) {
     const d = document.getElementById('dot');
@@ -181,10 +231,11 @@
   async function loadData() {
     setStatus('loading','Đang tải từ Google Sheets...');
     try {
-      const [dienRows, tramRows, dienTramRows] = await Promise.all([
+      const [dienRows, tramRows, dienTramRows, khRows] = await Promise.all([
         gasGet('Dien'),
         gasGet('Tram').catch(() => []),
-        gasGet('DienTram').catch(() => [])
+        gasGet('DienTram').catch(() => []),
+        gasGet('KhachHang').catch(() => [])
       ]);
       if (dienRows && dienRows.length > 0) {
         const r = dienRows[0];
@@ -200,6 +251,11 @@
       });
       syncDienTramLocal();
       renderTramTable();
+
+      allKH = khRows || [];
+      buildKHFilter();
+      renderKHTable();
+
       setStatus('ok','Đã tải xong');
     } catch(e) {
       const saved = JSON.parse(localStorage.getItem('dien_global') || '{}');
@@ -300,8 +356,102 @@
     }
   }
 
-  async function saveData() {
-    const sx  = parseFloat(document.getElementById('dien_sx').value)  || 0;
+  // ── Giá riêng theo KH ──
+  function buildKHFilter() {
+    const sel = document.getElementById('khFilterTram');
+    const trams = [...new Set(allKH.map(r => r.Tram).filter(Boolean))].sort();
+    trams.forEach(t => {
+      const o = document.createElement('option');
+      o.value = o.text = t;
+      sel.appendChild(o);
+    });
+  }
+
+  function renderKHTable() {
+    const q    = document.getElementById('khSearch').value.trim().toLowerCase();
+    const tram = document.getElementById('khFilterTram').value;
+    const list = allKH.filter(r =>
+      (!tram || r.Tram === tram) &&
+      (!q || (r.HoTen||'').toLowerCase().includes(q) || (r.MaKH||'').toLowerCase().includes(q))
+    );
+    const tbody = document.getElementById('khTableBody');
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--muted);">${q||tram?'Không tìm thấy.':'Chưa có khách hàng.'}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = list.map(r => {
+      const hasSX  = r.DienSXRieng  && parseFloat(r.DienSXRieng)  > 0;
+      const hasMDK = r.DienMDKRieng && parseFloat(r.DienMDKRieng) > 0;
+      const hasCustom = hasSX || hasMDK;
+      return `<tr id="kh_row_${r.row}">
+        <td>
+          <strong>${r.HoTen || '—'}</strong>
+          ${hasCustom ? '<span class="tram-badge">Giá riêng</span>' : ''}
+        </td>
+        <td><span class="kh-tram-tag">${r.Tram || '—'}</span></td>
+        <td class="r">
+          <input type="number" id="kh_sx_${r.row}" value="${hasSX ? r.DienSXRieng : ''}"
+            placeholder="Giá trạm/chung" min="0"
+            class="${hasSX?'custom':''}" oninput="onKHInput(${r.row})"/>
+        </td>
+        <td class="r">
+          <input type="number" id="kh_mdk_${r.row}" value="${hasMDK ? r.DienMDKRieng : ''}"
+            placeholder="Giá trạm/chung" min="0"
+            class="${hasMDK?'custom':''}" oninput="onKHInput(${r.row})"/>
+        </td>
+        <td style="text-align:right;white-space:nowrap;padding-right:12px;">
+          <button class="btn-sm btn-sm-save" onclick="saveKH(${r.row})">Lưu</button>
+          ${hasCustom ? `<button class="btn-sm btn-sm-reset" style="margin-left:4px;" onclick="resetKH(${r.row})">Xóa</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function onKHInput(rowId) {
+    const sx  = document.getElementById(`kh_sx_${rowId}`);
+    const mdk = document.getElementById(`kh_mdk_${rowId}`);
+    if (sx)  sx.classList.toggle('custom',  sx.value  !== '');
+    if (mdk) mdk.classList.toggle('custom', mdk.value !== '');
+  }
+
+  async function saveKH(rowId) {
+    const r   = allKH.find(x => x.row === rowId);
+    if (!r) return;
+    const sx  = parseFloat(document.getElementById(`kh_sx_${rowId}`).value)  || '';
+    const mdk = parseFloat(document.getElementById(`kh_mdk_${rowId}`).value) || '';
+    try {
+      await gasPost({
+        sheet: 'KhachHang', action: 'update', row: rowId,
+        MaKH: r.MaKH, HoTen: r.HoTen,
+        ChiSoCu: r.ChiSoCu, ChiSoMoi: r.ChiSoMoi,
+        DienSXTieuThu: r.DienSXTieuThu, DienMDKTieuThu: r.DienMDKTieuThu,
+        ThanhTienSX: r.ThanhTienSX, ThanhTienMDK: r.ThanhTienMDK,
+        NoCu: r.NoCu, CongTien: r.CongTien, TongCong: r.TongCong,
+        Thon: r.Thon, Tram: r.Tram, DiaChi: r.DiaChi,
+        SoCongTo: r.SoCongTo, SoDienTieuThu: r.SoDienTieuThu,
+        SoDT: r.SoDT, Zalo: r.Zalo,
+        NgayCapNhat: r.NgayCapNhat, DinhMuc: r.DinhMuc,
+        DienSXRieng: sx, DienMDKRieng: mdk
+      });
+      // Cập nhật local
+      r.DienSXRieng  = sx;
+      r.DienMDKRieng = mdk;
+      renderKHTable();
+      toast(`Đã lưu giá riêng: ${r.HoTen}`, 'success');
+    } catch(e) {
+      toast('Lỗi: ' + e.message, 'error');
+    }
+  }
+
+  async function resetKH(rowId) {
+    const r = allKH.find(x => x.row === rowId);
+    if (!r || !confirm(`Xóa giá riêng của "${r.HoTen}"?`)) return;
+    document.getElementById(`kh_sx_${rowId}`).value  = '';
+    document.getElementById(`kh_mdk_${rowId}`).value = '';
+    await saveKH(rowId);
+  }
+
+  async function saveData() {    const sx  = parseFloat(document.getElementById('dien_sx').value)  || 0;
     const mdk = parseFloat(document.getElementById('dien_mdk').value) || 0;
 
     syncLocal(sx, mdk);

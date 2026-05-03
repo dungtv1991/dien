@@ -272,8 +272,17 @@
           <input type="number" id="dinh_muc_kh" placeholder="0" min="0" oninput="recalcMoney()"/>
           <span class="auto-tag">Định mức riêng của KH</span>
         </div>
+        <div class="field">
+          <label>Giá SX riêng (đ/kWh)</label>
+          <input type="number" id="gia_sx_rieng" placeholder="Để trống = dùng giá trạm" min="0" readonly/>
+          <span class="auto-tag">Quản lý tại trang Dữ Liệu Điện</span>
+        </div>
+        <div class="field">
+          <label>Giá MDK riêng (đ/kWh)</label>
+          <input type="number" id="gia_mdk_rieng" placeholder="Để trống = dùng giá trạm" min="0" readonly/>
+          <span class="auto-tag">Quản lý tại trang Dữ Liệu Điện</span>
+        </div>
       </div>
-
       <div class="result-row">
         <div class="result-chip">
           <div class="rc-label">Cộng tiền (đ)</div>
@@ -361,12 +370,12 @@
   let globalD = JSON.parse(localStorage.getItem('dien_global') || '{}');
   let dienTramMap = JSON.parse(localStorage.getItem('dien_tram_gia') || '{}');
 
-  // Lấy giá điện cho một trạm (ưu tiên giá riêng, fallback giá chung)
-  function getGia(tram) {
+  // Lấy giá điện: ưu tiên giá riêng KH → giá riêng trạm → giá chung
+  function getGia(tram, khSX, khMDK) {
     const custom = dienTramMap[tram];
     return {
-      giaSX:  (custom && custom.dien_sx)  ? custom.dien_sx  : (globalD.dien_sx  || 0),
-      giaMDK: (custom && custom.dien_mdk) ? custom.dien_mdk : (globalD.dien_mdk || 0)
+      giaSX:  khSX  || (custom && custom.dien_sx)  || globalD.dien_sx  || 0,
+      giaMDK: khMDK || (custom && custom.dien_mdk) || globalD.dien_mdk || 0
     };
   }
 
@@ -460,7 +469,9 @@
 
   // Cập nhật label giá SX/MDK theo trạm của KH đang xem
   function updateGiaLabel(tram) {
-    const { giaSX, giaMDK } = getGia(tram || '');
+    const khSX  = parseFloat(document.getElementById('gia_sx_rieng').value)  || 0;
+    const khMDK = parseFloat(document.getElementById('gia_mdk_rieng').value) || 0;
+    const { giaSX, giaMDK } = getGia(tram || '', khSX, khMDK);
     const fmt = n => (n||0).toLocaleString('vi-VN');
     document.getElementById('lblGiaSX').textContent  = fmt(giaSX);
     document.getElementById('lblGiaMDK').textContent = fmt(giaMDK);
@@ -489,9 +500,11 @@
     const noCu      = parseFloat(document.getElementById('no_cu').value)        || 0;
     const delta     = Math.max(0, moi - cu);
 
-    // Lấy giá theo trạm của KH hiện tại
+    // Lấy giá theo trạm của KH hiện tại (ưu tiên giá riêng KH)
     const tram = (isNew ? document.getElementById('tram').value : document.getElementById('tram_text').value) || '';
-    const { giaSX, giaMDK } = getGia(tram);
+    const khSX  = parseFloat(document.getElementById('gia_sx_rieng').value)  || 0;
+    const khMDK = parseFloat(document.getElementById('gia_mdk_rieng').value) || 0;
+    const { giaSX, giaMDK } = getGia(tram, khSX, khMDK);
 
     // Điện SX = số điện trong định mức; nếu không có định mức thì toàn bộ là SX
     const dienSXThucTe = dinhMucKH > 0 ? Math.min(delta, dinhMucKH) : delta;
@@ -524,6 +537,8 @@
       numFields.forEach(id => document.getElementById(id).value = 0);
       document.getElementById('tram_text').value = '';
       document.getElementById('no_cu').value = 0;
+      document.getElementById('gia_sx_rieng').value  = '';
+      document.getElementById('gia_mdk_rieng').value = '';
       recalc();
       return;
     }
@@ -544,6 +559,8 @@
     document.getElementById('no_cu').value      = r.NoCu ?? 0;
     document.getElementById('dien_sx').value    = r.DienSXTieuThu ?? 0;
     document.getElementById('dinh_muc_kh').value = r.DinhMuc ?? 0;
+    document.getElementById('gia_sx_rieng').value  = r.DienSXRieng  || '';
+    document.getElementById('gia_mdk_rieng').value = r.DienMDKRieng || '';
     updateGiaLabel(r.Tram);
     recalcMoney();
   }
@@ -571,6 +588,8 @@
       TongCong:         n('tong_cong'),
       SoDienTieuThu:    Math.max(0, n('chi_so_moi') - n('chi_so_cu')),
       DinhMuc:          n('dinh_muc_kh'),
+      DienSXRieng:      parseFloat(document.getElementById('gia_sx_rieng').value)  || '',
+      DienMDKRieng:     parseFloat(document.getElementById('gia_mdk_rieng').value) || '',
       NgayCapNhat:      new Date().toISOString().slice(0, 10),
     };
   }

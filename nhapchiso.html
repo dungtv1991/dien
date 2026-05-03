@@ -192,12 +192,12 @@
   let modifiedRows = new Set();
   const n = v => parseFloat(v) || 0;
 
-  // Lấy giá điện cho một trạm (ưu tiên giá riêng, fallback giá chung)
-  function getGia(tram) {
+  // Lấy giá điện: ưu tiên giá riêng KH → giá riêng trạm → giá chung
+  function getGia(tram, khSX, khMDK) {
     const custom = dienTramMap[tram];
     return {
-      giaSX:  (custom && custom.dien_sx)  ? custom.dien_sx  : (globalDien.dien_sx  || 0),
-      giaMDK: (custom && custom.dien_mdk) ? custom.dien_mdk : (globalDien.dien_mdk || 0)
+      giaSX:  khSX  || (custom && custom.dien_sx)  || globalDien.dien_sx  || 0,
+      giaMDK: khMDK || (custom && custom.dien_mdk) || globalDien.dien_mdk || 0
     };
   }
 
@@ -310,7 +310,9 @@
     const delta   = Math.max(0, moi - cu);
     const dinhMucKH = n(document.getElementById(`dm_${i}`).value);
     const tram    = filtered[i]?.Tram || '';
-    const { giaSX, giaMDK } = getGia(tram);
+    const khSX    = parseFloat(filtered[i]?.DienSXRieng)  || 0;
+    const khMDK   = parseFloat(filtered[i]?.DienMDKRieng) || 0;
+    const { giaSX, giaMDK } = getGia(tram, khSX, khMDK);
 
     // Điện SX = trong định mức; nếu không có định mức thì toàn bộ là SX
     const dienSXThucTe = dinhMucKH > 0 ? Math.min(delta, dinhMucKH) : delta;
