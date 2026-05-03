@@ -46,7 +46,7 @@
 
     table{width:100%;border-collapse:collapse;font-size:12.5px;}
     thead tr{background:var(--surface2);}
-    th{padding:9px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap;}
+    th{padding:9px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--surface2);}
     th.r,td.r{text-align:right;}
     td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:middle;}
     tr:last-child td{border-bottom:none;}
@@ -68,6 +68,10 @@
     input.editable:focus{border-color:var(--primary);}
 
     .warn-msg{font-size:10px;color:var(--danger);margin-top:1px;white-space:nowrap;}
+
+    .money-cell{display:block;font-size:12.5px;color:var(--muted);white-space:nowrap;}
+    .money-total{font-weight:700;color:var(--text);}
+    body.mode-hd .money-cell{font-size:11.5px;}
 
     .btn-save-row{background:#ede9fe;color:#6d28d9;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;}
     .btn-save-row:hover{background:#ddd6fe;}
@@ -278,13 +282,13 @@
           <input type="number" id="dm_${i}" value="${n(r.DinhMuc)}" min="0" class="editable" oninput="onDmChange(${i})" onkeydown="nextOnEnter(event,'dm',${i})"/>
         </td>
         <td class="r">
-          <input type="number" id="dsx_${i}" value="${n(r.DienSXTieuThu)}" min="0" class="editable" oninput="onDsxChange(${i})" onkeydown="nextOnEnter(event,'dsx',${i})"/>
+          <input type="number" id="dsx_${i}" value="${n(r.DienSXTieuThu)}" min="0" class="editable" disabled/>
         </td>
         <td class="r"><input type="number" id="dmdk_${i}" value="0" disabled/></td>
-        <td class="r"><input type="number" id="ttsx_${i}" value="0" disabled/></td>
-        <td class="r"><input type="number" id="ttmdk_${i}" value="0" disabled/></td>
+        <td class="r"><span id="ttsx_${i}" class="money-cell">0</span><input type="hidden" id="ttsx_v_${i}" value="0"/></td>
+        <td class="r"><span id="ttmdk_${i}" class="money-cell">0</span><input type="hidden" id="ttmdk_v_${i}" value="0"/></td>
         <td class="r"><input type="number" id="nocu_${i}" value="${n(r.NoCu)}" min="0" class="editable" oninput="onNoCuChange(${i})" onkeydown="nextOnEnter(event,'nocu',${i})"/></td>
-        <td class="r"><input type="number" id="tong_${i}" value="0" disabled/></td>
+        <td class="r"><span id="tong_${i}" class="money-cell money-total">0</span><input type="hidden" id="tong_v_${i}" value="0"/></td>
         <td class="td-action">
           <button class="btn-save-row" id="savebtn_${i}" onclick="saveRow(${i})">Lưu</button>
         </td>
@@ -321,9 +325,17 @@
     const tong    = ttSX + ttMDK + noCu;
 
     document.getElementById(`dmdk_${i}`).value  = dienMDK;
-    document.getElementById(`ttsx_${i}`).value  = ttSX;
-    document.getElementById(`ttmdk_${i}`).value = ttMDK;
-    document.getElementById(`tong_${i}`).value  = tong;
+
+    const fmtM = v => v.toLocaleString('vi-VN');
+    // T.Tiền SX
+    document.getElementById(`ttsx_${i}`).textContent   = fmtM(ttSX);
+    document.getElementById(`ttsx_v_${i}`).value       = ttSX;
+    // T.Tiền MDK
+    document.getElementById(`ttmdk_${i}`).textContent  = fmtM(ttMDK);
+    document.getElementById(`ttmdk_v_${i}`).value      = ttMDK;
+    // Thành tiền
+    document.getElementById(`tong_${i}`).textContent   = fmtM(tong);
+    document.getElementById(`tong_v_${i}`).value       = tong;
   }
 
   function markModified(i) {
@@ -418,10 +430,10 @@
 
     const dienSX   = n(document.getElementById(`dsx_${i}`).value);
     const dienMDK  = n(document.getElementById(`dmdk_${i}`).value);
-    const ttSX     = n(document.getElementById(`ttsx_${i}`).value);
-    const ttMDK    = n(document.getElementById(`ttmdk_${i}`).value);
+    const ttSX     = n(document.getElementById(`ttsx_v_${i}`).value);
+    const ttMDK    = n(document.getElementById(`ttmdk_v_${i}`).value);
     const noCu     = n(document.getElementById(`nocu_${i}`).value);
-    const tong     = n(document.getElementById(`tong_${i}`).value);
+    const tong     = n(document.getElementById(`tong_v_${i}`).value);
     const congTien = ttSX + ttMDK;
     const dinhMuc  = n(document.getElementById(`dm_${i}`).value);
     const soDienTieuThu = Math.max(0, chiSoMoi - chiSoCu);
@@ -544,6 +556,80 @@
   }
 
   init();
+
+  // ── Floating sticky header ──
+  // Clone thead thành 1 div fixed phía trên, sync width với table thật
+  let _stickyEl = null;
+
+  function buildStickyHeader() {
+    if (_stickyEl) _stickyEl.remove();
+
+    const table = document.querySelector('.table-scroll table');
+    const thead = table?.querySelector('thead');
+    if (!table || !thead) return;
+
+    _stickyEl = document.createElement('div');
+    _stickyEl.id = 'sticky-thead';
+    _stickyEl.style.cssText = `
+      position:fixed;top:0;left:0;z-index:50;
+      overflow:hidden;pointer-events:none;display:none;
+      background:var(--surface2);
+      box-shadow:0 2px 6px rgba(0,0,0,.08);
+    `;
+
+    const cloneTable = table.cloneNode(false);
+    cloneTable.style.cssText = 'margin:0;border-collapse:collapse;';
+    const cloneThead = thead.cloneNode(true);
+    cloneTable.appendChild(cloneThead);
+    _stickyEl.appendChild(cloneTable);
+    document.body.appendChild(_stickyEl);
+
+    syncStickyHeader();
+  }
+
+  function syncStickyHeader() {
+    if (!_stickyEl) return;
+    const scrollWrap = document.querySelector('.table-scroll');
+    const table      = scrollWrap?.querySelector('table');
+    const thead      = table?.querySelector('thead');
+    if (!scrollWrap || !table || !thead) return;
+
+    const wrapRect  = scrollWrap.getBoundingClientRect();
+    const theadRect = thead.getBoundingClientRect();
+
+    // Hiện khi thead đã scroll ra khỏi viewport
+    const show = theadRect.bottom < 0;
+    _stickyEl.style.display = show ? 'block' : 'none';
+    if (!show) return;
+
+    // Sync vị trí ngang theo scroll của table-scroll
+    _stickyEl.style.left  = wrapRect.left + 'px';
+    _stickyEl.style.width = wrapRect.width + 'px';
+    _stickyEl.style.top   = '0px';
+
+    // Sync scroll ngang
+    _stickyEl.scrollLeft = scrollWrap.scrollLeft;
+
+    // Sync width từng cột
+    const realThs  = thead.querySelectorAll('th');
+    const cloneThs = _stickyEl.querySelectorAll('th');
+    realThs.forEach((th, i) => {
+      if (cloneThs[i]) cloneThs[i].style.width = th.offsetWidth + 'px';
+    });
+    const cloneTable = _stickyEl.querySelector('table');
+    if (cloneTable) cloneTable.style.width = table.offsetWidth + 'px';
+  }
+
+  window.addEventListener('scroll', syncStickyHeader, { passive: true });
+  window.addEventListener('resize', syncStickyHeader, { passive: true });
+  document.querySelector('.table-scroll')?.addEventListener('scroll', syncStickyHeader, { passive: true });
+
+  // Gọi lại sau khi data render xong
+  const _origRenderTable = renderTable;
+  renderTable = function() {
+    _origRenderTable();
+    requestAnimationFrame(buildStickyHeader);
+  };
 </script>
 </body>
 </html>
