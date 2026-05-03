@@ -52,6 +52,22 @@
     /* Định mức block (full width) */
     .dinh-muc-block{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:22px 20px;box-shadow:var(--shadow);margin-bottom:20px;}
 
+    /* Giá theo trạm */
+    .tram-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px;}
+    .tram-table th{padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);}
+    .tram-table th.r,.tram-table td.r{text-align:right;}
+    .tram-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    .tram-table tr:last-child td{border-bottom:none;}
+    .tram-table input[type=number]{border:1.5px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px;width:110px;outline:none;text-align:right;transition:border .2s;}
+    .tram-table input[type=number]:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(22,163,74,.12);}
+    .tram-table input.custom{border-color:#86efac;background:#f0fdf4;}
+    .btn-sm{padding:5px 12px;font-size:12px;border-radius:7px;font-weight:600;cursor:pointer;border:none;transition:background .15s;}
+    .btn-sm-save{background:#dcfce7;color:#15803d;}
+    .btn-sm-save:hover{background:#bbf7d0;}
+    .btn-sm-reset{background:#fee2e2;color:#b91c1c;}
+    .btn-sm-reset:hover{background:#fecaca;}
+    .tram-badge{display:inline-block;background:var(--primary-light);color:var(--primary);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;}
+
     /* Actions */
     .action-bar{display:flex;gap:12px;justify-content:flex-end;}
     .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:background .15s,transform .1s;}
@@ -121,11 +137,40 @@
     <button class="btn btn-primary" onclick="saveData()">💾 Lưu lên Google Sheets</button>
   </div>
   <div class="saved-at" id="savedAt"></div>
+
+  <!-- Giá điện theo trạm -->
+  <div style="margin-top:32px;">
+    <div class="section-label">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Giá Điện Riêng Theo Trạm
+    </div>
+    <div class="info-note" style="margin-bottom:16px;">
+      <span style="font-size:18px;flex-shrink:0;">💡</span>
+      <span>Nếu trạm có giá riêng, hệ thống sẽ dùng giá đó thay vì giá chung. Để trống = dùng giá chung.</span>
+    </div>
+    <div class="dien-block" style="padding:0;overflow:hidden;">
+      <table class="tram-table">
+        <thead>
+          <tr>
+            <th>Tên trạm</th>
+            <th class="r">Giá SX (đ/kWh)</th>
+            <th class="r">Giá MDK (đ/kWh)</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tramTableBody">
+          <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <script src="config.js"></script>
 <script>
   let gasRow = null; // row number trong Dien sheet (nếu đã có)
+  let allTrams = [];
+  let dienTramMap = {}; // { ten_tram: { dien_sx, dien_mdk, row } }
 
   function setStatus(state, text) {
     const d = document.getElementById('dot');
@@ -136,17 +181,27 @@
   async function loadData() {
     setStatus('loading','Đang tải từ Google Sheets...');
     try {
-      const rows = await gasGet('Dien');
-      if (rows && rows.length > 0) {
-        const r = rows[0];
+      const [dienRows, tramRows, dienTramRows] = await Promise.all([
+        gasGet('Dien'),
+        gasGet('Tram').catch(() => []),
+        gasGet('DienTram').catch(() => [])
+      ]);
+      if (dienRows && dienRows.length > 0) {
+        const r = dienRows[0];
         gasRow = r.row;
         document.getElementById('dien_sx').value  = r.dien_sx  || 0;
         document.getElementById('dien_mdk').value = r.dien_mdk || 0;
         syncLocal(r.dien_sx, r.dien_mdk);
       }
+      allTrams = (tramRows || []).map(t => t.ten_tram).filter(Boolean);
+      dienTramMap = {};
+      (dienTramRows || []).forEach(r => {
+        if (r.ten_tram) dienTramMap[r.ten_tram] = { dien_sx: r.dien_sx, dien_mdk: r.dien_mdk, row: r.row };
+      });
+      syncDienTramLocal();
+      renderTramTable();
       setStatus('ok','Đã tải xong');
     } catch(e) {
-      // Fallback: đọc localStorage
       const saved = JSON.parse(localStorage.getItem('dien_global') || '{}');
       if (saved.gasRow) gasRow = saved.gasRow;
       document.getElementById('dien_sx').value  = saved.dien_sx  || 0;
@@ -158,7 +213,6 @@
   }
 
   function syncLocal(sx, mdk) {
-    localStorage.removeItem('dien_global');
     localStorage.setItem('dien_global', JSON.stringify({
       dien_sx: parseFloat(sx)||0,
       dien_mdk: parseFloat(mdk)||0,
@@ -166,6 +220,84 @@
       savedAt: new Date().toLocaleString('vi-VN'),
       gasRow: gasRow
     }));
+  }
+
+  function syncDienTramLocal() {
+    localStorage.setItem('dien_tram_gia', JSON.stringify(dienTramMap));
+  }
+
+  function renderTramTable() {
+    const tbody = document.getElementById('tramTableBody');
+    if (!allTrams.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--muted);">Chưa có trạm nào. Thêm trạm trong mục Quản Lý Trạm.</td></tr>';
+      return;
+    }
+    const globalSX  = parseFloat(document.getElementById('dien_sx').value)  || 0;
+    const globalMDK = parseFloat(document.getElementById('dien_mdk').value) || 0;
+    tbody.innerHTML = allTrams.map(tram => {
+      const custom = dienTramMap[tram];
+      const sxVal  = custom ? custom.dien_sx  : '';
+      const mdkVal = custom ? custom.dien_mdk : '';
+      const hasCustom = !!custom;
+      return `<tr id="tram_row_${tram}">
+        <td>
+          <strong>${tram}</strong>
+          ${hasCustom ? '<span class="tram-badge">Giá riêng</span>' : '<span style="font-size:11px;color:var(--muted);">Dùng giá chung</span>'}
+        </td>
+        <td class="r">
+          <input type="number" id="tram_sx_${tram}" value="${sxVal}" placeholder="${globalSX} (chung)"
+            class="${hasCustom?'custom':''}" min="0" oninput="onTramInput('${tram}')"/>
+        </td>
+        <td class="r">
+          <input type="number" id="tram_mdk_${tram}" value="${mdkVal}" placeholder="${globalMDK} (chung)"
+            class="${hasCustom?'custom':''}" min="0" oninput="onTramInput('${tram}')"/>
+        </td>
+        <td style="text-align:right;white-space:nowrap;padding-right:12px;">
+          <button class="btn-sm btn-sm-save" onclick="saveTram('${tram}')">Lưu</button>
+          ${hasCustom ? `<button class="btn-sm btn-sm-reset" style="margin-left:4px;" onclick="resetTram('${tram}')">Xóa giá riêng</button>` : ''}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function onTramInput(tram) {
+    const sx  = document.getElementById(`tram_sx_${tram}`);
+    const mdk = document.getElementById(`tram_mdk_${tram}`);
+    sx.classList.toggle('custom', sx.value !== '');
+    mdk.classList.toggle('custom', mdk.value !== '');
+  }
+
+  async function saveTram(tram) {
+    const sx  = parseFloat(document.getElementById(`tram_sx_${tram}`).value)  || 0;
+    const mdk = parseFloat(document.getElementById(`tram_mdk_${tram}`).value) || 0;
+    if (!sx && !mdk) { toast('Nhập ít nhất một giá trước khi lưu!', 'error'); return; }
+    try {
+      await gasPost({ sheet: 'DienTram', action: 'upsert', ten_tram: tram, dien_sx: sx, dien_mdk: mdk });
+      // Reload DienTram để lấy row mới nếu vừa insert
+      const rows = await gasGet('DienTram').catch(() => []);
+      dienTramMap = {};
+      rows.forEach(r => { if (r.ten_tram) dienTramMap[r.ten_tram] = { dien_sx: r.dien_sx, dien_mdk: r.dien_mdk, row: r.row }; });
+      syncDienTramLocal();
+      renderTramTable();
+      toast(`Đã lưu giá riêng cho trạm ${tram}`, 'success');
+    } catch(e) {
+      toast('Lỗi: ' + e.message, 'error');
+    }
+  }
+
+  async function resetTram(tram) {
+    if (!confirm(`Xóa giá riêng của trạm "${tram}"? Trạm sẽ dùng lại giá chung.`)) return;
+    const entry = dienTramMap[tram];
+    if (!entry) return;
+    try {
+      await gasPost({ sheet: 'DienTram', action: 'delete', row: entry.row });
+      delete dienTramMap[tram];
+      syncDienTramLocal();
+      renderTramTable();
+      toast(`Đã xóa giá riêng trạm ${tram}, dùng lại giá chung`, 'success');
+    } catch(e) {
+      toast('Lỗi: ' + e.message, 'error');
+    }
   }
 
   async function saveData() {
@@ -183,11 +315,10 @@
       } else {
         await gasPost({ ...payload, action:'insert' });
         const rows = await gasGet('Dien');
-        if (rows && rows.length > 0) {
-          gasRow = rows[0].row;
-          syncLocal(sx, mdk, dm);
-        }
+        if (rows && rows.length > 0) { gasRow = rows[0].row; syncLocal(sx, mdk); }
       }
+      // Cập nhật placeholder trong bảng trạm
+      renderTramTable();
       setStatus('ok','Đã lưu lên Google Sheets!');
       toast('Đã lưu! Tự động áp dụng cho toàn hệ thống.', 'success');
     } catch(e) {

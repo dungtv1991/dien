@@ -1,6 +1,16 @@
+// ── Thay SPREADSHEET_ID bằng ID thật của Google Sheets ──
+// Lấy từ URL: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
+var SPREADSHEET_ID = ''; // ← điền ID vào đây
+
+function getSpreadsheet() {
+  return SPREADSHEET_ID
+    ? SpreadsheetApp.openById(SPREADSHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+}
+
 function doGet(e) {
   var sheetName = e.parameter.sheet || "KhachHang";
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  var sheet = getSpreadsheet().getSheetByName(sheetName);
 
   if (!sheet) {
     return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Không tìm thấy sheet: " + sheetName }))
@@ -42,6 +52,8 @@ function doGet(e) {
       result.push({ row: i + 1, ma_tram: row[0], ten_tram: row[1] });
     } else if (sheetName === "Dien") {
       result.push({ row: i + 1, dien_sx: row[0], dien_mdk: row[1], dinh_muc: row[2] });
+    } else if (sheetName === "DienTram") {
+      result.push({ row: i + 1, ten_tram: row[0], dien_sx: row[1], dien_mdk: row[2] });
     }
   }
 
@@ -54,7 +66,8 @@ function doPost(e) {
     var requestData = JSON.parse(e.postData.contents);
     var sheetName = requestData.sheet;
 
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+    var ss = getSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
       return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "Không tìm thấy sheet: " + sheetName }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -97,6 +110,27 @@ function doPost(e) {
       } else if (requestData.action === "delete") {
         sheet.deleteRow(requestData.row);
         return ok("Đã xóa dữ liệu Điện thành công");
+      }
+    }
+
+    // --- SHEET DIEN TRAM ---
+    else if (sheetName === "DienTram") {
+      if (requestData.action === "upsert") {
+        // Tìm row có ten_tram trùng, nếu có thì update, không thì insert
+        var data = sheet.getDataRange().getValues();
+        var foundRow = -1;
+        for (var i = 1; i < data.length; i++) {
+          if (data[i][0] === requestData.ten_tram) { foundRow = i + 1; break; }
+        }
+        if (foundRow > 0) {
+          sheet.getRange(foundRow, 1, 1, 3).setValues([[requestData.ten_tram, requestData.dien_sx, requestData.dien_mdk]]);
+        } else {
+          sheet.appendRow([requestData.ten_tram, requestData.dien_sx, requestData.dien_mdk]);
+        }
+        return ok("Đã lưu giá điện trạm " + requestData.ten_tram);
+      } else if (requestData.action === "delete") {
+        sheet.deleteRow(requestData.row);
+        return ok("Đã xóa giá điện trạm");
       }
     }
 

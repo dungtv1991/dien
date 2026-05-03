@@ -184,8 +184,18 @@
 <script src="config.js"></script>
 <script>
   let allRecords = [], filtered = [], globalDien = {};
+  let dienTramMap = {}; // giá riêng theo trạm
   let modifiedRows = new Set();
   const n = v => parseFloat(v) || 0;
+
+  // Lấy giá điện cho một trạm (ưu tiên giá riêng, fallback giá chung)
+  function getGia(tram) {
+    const custom = dienTramMap[tram];
+    return {
+      giaSX:  (custom && custom.dien_sx)  ? custom.dien_sx  : (globalDien.dien_sx  || 0),
+      giaMDK: (custom && custom.dien_mdk) ? custom.dien_mdk : (globalDien.dien_mdk || 0)
+    };
+  }
 
   function setStatus(s, t) {
     document.getElementById('dot').className = 'dot' + (s==='ok'?' ok':s==='err'?' err':' loading');
@@ -195,9 +205,10 @@
   async function init() {
     setStatus('loading', 'Đang tải...');
     try {
-      const [rows, dienRows] = await Promise.all([
+      const [rows, dienRows, dienTramRows] = await Promise.all([
         gasGet('KhachHang'),
-        gasGet('Dien').catch(() => null)
+        gasGet('Dien').catch(() => null),
+        gasGet('DienTram').catch(() => [])
       ]);
       allRecords = rows;
       if (dienRows && dienRows.length > 0) {
@@ -207,11 +218,20 @@
       } else {
         globalDien = JSON.parse(localStorage.getItem('dien_global') || '{}');
       }
+      dienTramMap = {};
+      (dienTramRows || []).forEach(r => { if (r.ten_tram) dienTramMap[r.ten_tram] = { dien_sx: r.dien_sx, dien_mdk: r.dien_mdk }; });
+      // Fallback từ localStorage nếu GAS DienTram lỗi
+      if (!Object.keys(dienTramMap).length) {
+        dienTramMap = JSON.parse(localStorage.getItem('dien_tram_gia') || '{}');
+      } else {
+        localStorage.setItem('dien_tram_gia', JSON.stringify(dienTramMap));
+      }
       buildFilter();
       applyFilter();
       setStatus('ok', `Đã tải ${allRecords.length} khách hàng`);
     } catch(e) {
       globalDien = JSON.parse(localStorage.getItem('dien_global') || '{}');
+      dienTramMap = JSON.parse(localStorage.getItem('dien_tram_gia') || '{}');
       setStatus('err', e.message);
       toast(e.message, 'error');
     }
@@ -285,14 +305,16 @@
     const moi     = n(document.getElementById(`moi_${i}`).value);
     const delta   = Math.max(0, moi - cu);
     const dinhMucKH = n(document.getElementById(`dm_${i}`).value);
-    const dienSXDinhMuc = n(document.getElementById(`dsx_${i}`).value);
-    // Dùng định mức riêng của KH nếu có, không thì dùng Điện SX nhập tay
-    const dinhMucApDung = dinhMucKH > 0 ? dinhMucKH : dienSXDinhMuc;
-    // Thực tế SX = min(delta, định mức) — không tính vượt quá số điện thực dùng
-    const dienSXThucTe = Math.min(delta, dinhMucApDung);
-    const dienMDK = Math.max(0, delta - dinhMucApDung);
-    const giaSX   = n(globalDien.dien_sx);
-    const giaMDK  = n(globalDien.dien_mdk);
+    const tram    = filtered[i]?.Tram || '';
+    const { giaSX, giaMDK } = getGia(tram);
+
+    // Điện SX = trong định mức; nếu không có định mức thì toàn bộ là SX
+    const dienSXThucTe = dinhMucKH > 0 ? Math.min(delta, dinhMucKH) : delta;
+    const dienMDK = dinhMucKH > 0 ? Math.max(0, delta - dinhMucKH) : 0;
+
+    // Cập nhật field Điện SX
+    document.getElementById(`dsx_${i}`).value = dienSXThucTe;
+
     const ttSX    = dienSXThucTe * giaSX;
     const ttMDK   = dienMDK * giaMDK;
     const noCu    = n(document.getElementById(`nocu_${i}`).value);
@@ -372,12 +394,6 @@
 
   function nextOnEnter(e, type, i) {
     if (e.key !== 'Enter') return;
-    // Với chỉ số mới: chỉ xuống dòng khi giá trị hợp lệ
-    if (type === 'moi') {
-      const cu  = n(document.getElementById(`cu_${i}`).value);
-      const moi = n(document.getElementById(`moi_${i}`).value);
-      if (moi <= cu) return;
-    }
     e.preventDefault();
     const next = document.getElementById(`${type}_${i + 1}`);
     if (next) { next.focus(); next.select(); }

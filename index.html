@@ -189,7 +189,7 @@
       <h2>Khách Hàng</h2>
       <p>Nhập và quản lý thông tin từng khách hàng sử dụng điện.</p>
       <div class="stats-row">
-        <div class="stat-chip">Tổng: <span id="statKH">0</span></div>
+        <div class="stat-chip">Quản lý khách hàng</div>
       </div>
     </div>
     <span class="card-arrow">›</span>
@@ -202,7 +202,7 @@
       <h2>Dữ Liệu Về Điện</h2>
       <p>Quản lý định mức và đơn giá điện theo từng khách hàng.</p>
       <div class="stats-row">
-        <div class="stat-chip">Bản ghi: <span id="statDien">0</span></div>
+        <div class="stat-chip">Đơn giá & định mức</div>
       </div>
     </div>
     <span class="card-arrow">›</span>
@@ -215,7 +215,7 @@
       <h2>Quản Lý Trạm</h2>
       <p>Thêm, sửa, xóa danh sách các trạm điện trong hệ thống.</p>
       <div class="stats-row">
-        <div class="stat-chip">Trạm: <span id="statTram">0</span></div>
+        <div class="stat-chip">Danh sách trạm</div>
       </div>
     </div>
     <span class="card-arrow">›</span>
@@ -268,24 +268,5 @@
 <div class="footer">Hệ thống quản lý điện &copy; 2025</div>
 
 <script src="config.js"></script>
-<script>
-  async function loadStats() {
-    try {
-      const kh = await gasGet('KhachHang');
-      document.getElementById('statKH').textContent   = kh.length;
-      document.getElementById('statDien').textContent = kh.length;
-    } catch {
-      document.getElementById('statKH').textContent   = 0;
-      document.getElementById('statDien').textContent = 0;
-    }
-    try {
-      const tram = await gasGet('Tram');
-      document.getElementById('statTram').textContent = tram.length;
-    } catch {
-      document.getElementById('statTram').textContent = (JSON.parse(localStorage.getItem('dien_tram')||'[]')).length || '—';
-    }
-  }
-  loadStats();
-</script>
 </body>
 </html>

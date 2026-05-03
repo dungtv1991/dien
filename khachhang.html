@@ -359,15 +359,33 @@
 <script>
   // ── Dữ liệu điện chung từ dien.html ──
   let globalD = JSON.parse(localStorage.getItem('dien_global') || '{}');
+  let dienTramMap = JSON.parse(localStorage.getItem('dien_tram_gia') || '{}');
+
+  // Lấy giá điện cho một trạm (ưu tiên giá riêng, fallback giá chung)
+  function getGia(tram) {
+    const custom = dienTramMap[tram];
+    return {
+      giaSX:  (custom && custom.dien_sx)  ? custom.dien_sx  : (globalD.dien_sx  || 0),
+      giaMDK: (custom && custom.dien_mdk) ? custom.dien_mdk : (globalD.dien_mdk || 0)
+    };
+  }
 
   async function loadDienGlobal() {
     try {
-      const rows = await gasGet('Dien');
-      if (rows && rows.length > 0) {
-        const r = rows[0];
+      const [dienRows, dienTramRows] = await Promise.all([
+        gasGet('Dien'),
+        gasGet('DienTram').catch(() => [])
+      ]);
+      if (dienRows && dienRows.length > 0) {
+        const r = dienRows[0];
         const prev = JSON.parse(localStorage.getItem('dien_global') || '{}');
         globalD = { dien_sx: r.dien_sx, dien_mdk: r.dien_mdk, dinh_muc: r.dinh_muc ?? prev.dinh_muc ?? 0 };
         localStorage.setItem('dien_global', JSON.stringify({ ...globalD, savedAt: new Date().toLocaleString('vi-VN') }));
+      }
+      if (dienTramRows && dienTramRows.length > 0) {
+        dienTramMap = {};
+        dienTramRows.forEach(r => { if (r.ten_tram) dienTramMap[r.ten_tram] = { dien_sx: r.dien_sx, dien_mdk: r.dien_mdk }; });
+        localStorage.setItem('dien_tram_gia', JSON.stringify(dienTramMap));
       }
     } catch { /* giữ nguyên cache localStorage */ }
     refreshGlobal();
@@ -375,6 +393,7 @@
 
   function refreshGlobal() {
     globalD = JSON.parse(localStorage.getItem('dien_global') || '{}');
+    dienTramMap = JSON.parse(localStorage.getItem('dien_tram_gia') || '{}');
     const fmt = n => (n||0).toLocaleString('vi-VN');
     document.getElementById('lblGiaSX').textContent   = fmt(globalD.dien_sx);
     document.getElementById('lblGiaMDK').textContent  = fmt(globalD.dien_mdk);
@@ -439,6 +458,14 @@
 
   function filterChange() { applyFilter(); }
 
+  // Cập nhật label giá SX/MDK theo trạm của KH đang xem
+  function updateGiaLabel(tram) {
+    const { giaSX, giaMDK } = getGia(tram || '');
+    const fmt = n => (n||0).toLocaleString('vi-VN');
+    document.getElementById('lblGiaSX').textContent  = fmt(giaSX);
+    document.getElementById('lblGiaMDK').textContent = fmt(giaMDK);
+  }
+
   // ── Tính tiền tự động ──
   // recalc(): gọi khi chỉ số thay đổi — nếu chỉ số mới khác origMoi thì tự fill chỉ số cũ
   function recalc() {
@@ -461,8 +488,10 @@
     const dinhMucKH = parseFloat(document.getElementById('dinh_muc_kh').value)  || 0;
     const noCu      = parseFloat(document.getElementById('no_cu').value)        || 0;
     const delta     = Math.max(0, moi - cu);
-    const giaSX     = globalD.dien_sx  || 0;
-    const giaMDK    = globalD.dien_mdk || 0;
+
+    // Lấy giá theo trạm của KH hiện tại
+    const tram = (isNew ? document.getElementById('tram').value : document.getElementById('tram_text').value) || '';
+    const { giaSX, giaMDK } = getGia(tram);
 
     // Điện SX = số điện trong định mức; nếu không có định mức thì toàn bộ là SX
     const dienSXThucTe = dinhMucKH > 0 ? Math.min(delta, dinhMucKH) : delta;
@@ -515,6 +544,7 @@
     document.getElementById('no_cu').value      = r.NoCu ?? 0;
     document.getElementById('dien_sx').value    = r.DienSXTieuThu ?? 0;
     document.getElementById('dinh_muc_kh').value = r.DinhMuc ?? 0;
+    updateGiaLabel(r.Tram);
     recalcMoney();
   }
 
