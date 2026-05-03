@@ -100,7 +100,9 @@
     .btn-close-modal{margin-top:18px;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 24px;font-size:13px;font-weight:600;cursor:pointer;}
     .btn-close-modal:hover{background:var(--primary-dark);}
 
-    .toast-wrap{position:fixed;top:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+    .btn-qt-row{background:#fef2f2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
+    .btn-qt-row:hover{background:#fee2e2;}
+    .btn-qt-row.done{background:#f0fdf4;color:#16a34a;border-color:#86efac;cursor:default;}display:flex;flex-direction:column;gap:8px;}
     .toast{min-width:230px;padding:10px 14px;border-radius:9px;font-size:12px;font-weight:600;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:sIn .25s ease;}
     .toast.success{background:var(--green);}
     .toast.error{background:var(--danger);}
@@ -189,6 +191,7 @@
             <th class="r">CS Mới</th>
             <th class="r">Tổng cộng hiện tại</th>
             <th class="r">Nợ cũ (kỳ mới)</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="tableBody">
@@ -246,7 +249,7 @@
   function renderTable() {
     const tbody = document.getElementById('tableBody');
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted);">Không có dữ liệu</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted);">Không có dữ liệu</td></tr>';
       return;
     }
     tbody.innerHTML = filtered.map((r, i) => {
@@ -263,6 +266,9 @@
           <input type="number" class="no-cu-input" id="nocu_${i}" min="0" placeholder="0"
             oninput="onNoCuInput(${i})" value=""/>
         </td>
+        <td style="padding:4px 8px;">
+          <button class="btn-qt-row" id="qtbtn_${i}" onclick="quyetToanRow(${i})">🔄 QT</button>
+        </td>
       </tr>`;
     }).join('');
   }
@@ -272,8 +278,66 @@
     inp.classList.toggle('has-val', inp.value !== '' && n(inp.value) > 0);
   }
 
-  function confirmQuyetToan() {
-    if (!filtered.length) { toast('Không có dữ liệu để quyết toán!', 'info'); return; }
+  // Quyết toán 1 người
+  async function quyetToanRow(i) {
+    const r = filtered[i];
+    const btn = document.getElementById(`qtbtn_${i}`);
+    if (!confirm(`Quyết toán cho "${r.HoTen || 'KH này'}"?\nKhông thể hoàn tác.`)) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    const noCuMoi    = n(document.getElementById(`nocu_${i}`).value);
+    const chiSoCuMoi = n(r.ChiSoMoi);
+    try {
+      await postQuyetToan(r, chiSoCuMoi, noCuMoi);
+      btn.className = 'btn-qt-row done';
+      btn.textContent = '✓ Xong';
+      // Cập nhật local
+      const ai = allRecords.findIndex(x => x.row === r.row);
+      const updated = { ...r, ChiSoCu: chiSoCuMoi, ChiSoMoi: chiSoCuMoi, NoCu: noCuMoi, TongCong: noCuMoi, CongTien: 0 };
+      if (ai >= 0) allRecords[ai] = updated;
+      filtered[i] = updated;
+      // Cập nhật UI trực tiếp trên row
+      const row = document.getElementById(`qt_row_${i}`);
+      row.classList.remove('has-debt');
+      row.cells[3].textContent = fmt(chiSoCuMoi);  // CS Cũ
+      row.cells[4].textContent = fmt(chiSoCuMoi);  // CS Mới
+      const moneyCell = row.cells[5];
+      moneyCell.textContent = noCuMoi > 0 ? fmt(noCuMoi) + ' đ' : '0 đ';
+      moneyCell.style.color = noCuMoi > 0 ? '#dc2626' : '';
+      moneyCell.style.fontWeight = noCuMoi > 0 ? '700' : '';
+      toast(`Đã quyết toán: ${r.HoTen}`, 'success');
+    } catch(e) {
+      btn.disabled = false;
+      btn.textContent = '🔄 QT';
+      toast('Lỗi: ' + e.message, 'error');
+    }
+  }
+
+  // Hàm post chung cho 1 bản ghi
+  async function postQuyetToan(r, chiSoCuMoi, noCuMoi) {
+    await gasPost({
+      sheet: 'KhachHang', action: 'update', row: r.row,
+      MaKH: r.MaKH, HoTen: r.HoTen,
+      ChiSoCu:        chiSoCuMoi,
+      ChiSoMoi:       chiSoCuMoi,
+      DienSXTieuThu:  n(r.DienSXTieuThu),
+      DienMDKTieuThu: 0,
+      ThanhTienSX:    0,
+      ThanhTienMDK:   0,
+      NoCu:           noCuMoi,
+      CongTien:       0,
+      TongCong:       noCuMoi,
+      SoDienTieuThu:  0,
+      Thon: r.Thon, Tram: r.Tram, DiaChi: r.DiaChi,
+      SoCongTo: r.SoCongTo,
+      SoDT: r.SoDT, Zalo: r.Zalo,
+      NgayCapNhat: new Date().toISOString().slice(0, 10),
+      DinhMuc: n(r.DinhMuc),
+      DienSXRieng: r.DienSXRieng || '', DienMDKRieng: r.DienMDKRieng || ''
+    });
+  }
+
+  function confirmQuyetToan() {    if (!filtered.length) { toast('Không có dữ liệu để quyết toán!', 'info'); return; }
     document.getElementById('confirmCount').textContent = filtered.length;
     document.getElementById('confirmModal').classList.remove('hidden');
   }
@@ -302,25 +366,7 @@
       const chiSoCuMoi = n(r.ChiSoMoi); // chỉ số cũ kỳ mới = chỉ số mới hiện tại
 
       try {
-        await gasPost({
-          sheet: 'KhachHang', action: 'update', row: r.row,
-          MaKH: r.MaKH, HoTen: r.HoTen,
-          ChiSoCu:        chiSoCuMoi,
-          ChiSoMoi:       chiSoCuMoi,
-          DienSXTieuThu:  n(r.DienSXTieuThu),
-          DienMDKTieuThu: 0,
-          ThanhTienSX:    0,
-          ThanhTienMDK:   0,
-          NoCu:           noCuMoi,
-          CongTien:       0,
-          TongCong:       noCuMoi,
-          SoDienTieuThu:  0,
-          Thon: r.Thon, Tram: r.Tram, DiaChi: r.DiaChi,
-          SoCongTo: r.SoCongTo,
-          SoDT: r.SoDT, Zalo: r.Zalo,
-          NgayCapNhat: new Date().toISOString().slice(0, 10),
-          DinhMuc: n(r.DinhMuc)
-        });
+        await postQuyetToan(r, chiSoCuMoi, noCuMoi);
         done++;
       } catch(e) {
         errors.push(r.HoTen || `Hàng ${i+1}`);

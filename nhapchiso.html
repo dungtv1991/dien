@@ -62,8 +62,7 @@
     input[type=number]::-webkit-outer-spin-button,
     input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
     input[type=number]:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,58,237,.12);}
-    input[type=number].warn{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(220,38,38,.1)!important;}
-    input[type=number][disabled]{background:var(--surface2);color:var(--muted);cursor:default;border-color:transparent;}
+    input[type=number].warn{border-color:var(--danger)!important;box-shadow:0 0 0 3px rgba(220,38,38,.1)!important;}    input[type=number][disabled]{background:var(--surface2);color:var(--muted);cursor:default;border-color:transparent;}
     input.editable{border-color:#c4b5fd;background:#faf5ff;}
     input.editable:focus{border-color:var(--primary);}
 
@@ -265,7 +264,7 @@
       return;
     }
     tbody.innerHTML = filtered.map((r, i) => {
-      return `<tr id="row_${i}" data-orig-moi="${n(r.ChiSoMoi)}">
+      return `<tr id="row_${i}" data-orig-cu="${n(r.ChiSoCu)}" data-orig-moi="${n(r.ChiSoMoi)}">
         <td class="td-stt">${i + 1}</td>
         <td class="td-name">${r.HoTen || '—'}</td>
         <td class="td-tram">${r.Tram || '—'}</td>
@@ -275,7 +274,6 @@
         <td class="r">
           <div>
             <input type="number" id="moi_${i}" value="${n(r.ChiSoMoi)}" min="0" class="editable" oninput="onMoiChange(${i})" onkeydown="nextOnEnter(event,'moi',${i})"/>
-            <div class="warn-msg" id="warn_${i}"></div>
           </div>
         </td>
         <td class="r">
@@ -355,45 +353,20 @@
   }
 
   function onMoiChange(i) {
-    const origMoi = n(document.getElementById(`row_${i}`).dataset.origMoi);
-    const moi = n(document.getElementById(`moi_${i}`).value);
-    // Nếu chỉ số mới khác origMoi và hợp lệ → tự fill chỉ số cũ
-    if (moi !== origMoi && moi > origMoi) {
-      document.getElementById(`cu_${i}`).value = origMoi;
-    }
-    validateAndCalc(i);
-  }
-
-  function validateAndCalc(i) {
-    const origMoi = n(document.getElementById(`row_${i}`).dataset.origMoi);
+    const row     = document.getElementById(`row_${i}`);
+    const origCu  = n(row.dataset.origCu);
+    const origMoi = n(row.dataset.origMoi);
     const moiVal  = document.getElementById(`moi_${i}`).value;
-    const inp     = document.getElementById(`moi_${i}`);
-    const warn    = document.getElementById(`warn_${i}`);
 
     if (moiVal === '') {
-      inp.classList.remove('warn');
-      warn.textContent = '';
-      return;
+      // Xoá hết → trả lại chỉ số cũ ban đầu
+      document.getElementById(`cu_${i}`).value = origCu;
+    } else {
+      // Có giá trị → auto-fill chỉ số cũ = origMoi (rollover kỳ)
+      document.getElementById(`cu_${i}`).value = origMoi;
     }
-
-    const moi = n(moiVal);
-    if (moi === origMoi) {
-      inp.classList.add('warn');
-      warn.textContent = 'Chỉ số mới bằng chỉ số cũ!';
-      return;
-    }
-    if (moi < origMoi) {
-      inp.classList.add('warn');
-      warn.textContent = 'Chỉ số mới nhỏ hơn chỉ số cũ!';
-      return;
-    }
-
-    inp.classList.remove('warn');
-    warn.textContent = '';
     markModified(i);
-    // Tự fill chỉ số cũ = origMoi (chỉ số mới kỳ trước)
-    document.getElementById(`cu_${i}`).value = origMoi;
-    calcRowFull(i);
+    calcRowMoney(i);
   }
 
   function onDsxChange(i) {
@@ -423,12 +396,9 @@
     const chiSoCuInput = n(document.getElementById(`cu_${i}`).value);
     const chiSoMoi     = n(document.getElementById(`moi_${i}`).value);
 
-    if (!chiSoMoi) { toast('Vui lòng nhập chỉ số mới!', 'error'); return; }
-    if (chiSoMoi <= chiSoCuInput) { toast('Chỉ số mới phải lớn hơn chỉ số cũ!', 'error'); return; }
+    if (!chiSoMoi && chiSoMoi !== 0) { toast('Vui lòng nhập chỉ số mới!', 'error'); return; }
 
-    // ChiSoCu lưu = ChiSoMoi cũ trước khi sửa (rollover kỳ)
-    const origMoi = n(document.getElementById(`row_${i}`).dataset.origMoi);
-    const chiSoCu = origMoi || chiSoCuInput;
+    const chiSoCu = n(document.getElementById(`cu_${i}`).value);
 
     const dienSX   = n(document.getElementById(`dsx_${i}`).value);
     const dienMDK  = n(document.getElementById(`dmdk_${i}`).value);
@@ -464,6 +434,7 @@
       const ai = allRecords.findIndex(x => x.row === r.row);
       if (ai >= 0) allRecords[ai] = filtered[i];
       document.getElementById(`cu_${i}`).value = chiSoCu;
+      document.getElementById(`row_${i}`).dataset.origCu  = chiSoCu;
       document.getElementById(`row_${i}`).dataset.origMoi = chiSoMoi;
 
       modifiedRows.delete(i);
@@ -480,11 +451,7 @@
   }
 
   async function saveAll() {
-    const valid = [...modifiedRows].filter(i => {
-      const cu  = n(document.getElementById(`cu_${i}`).value);
-      const moi = n(document.getElementById(`moi_${i}`).value);
-      return moi > cu;
-    });
+    const valid = [...modifiedRows];
     if (!valid.length) {
       toast('Không có hàng nào hợp lệ để lưu!', 'info');
       return;
