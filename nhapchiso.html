@@ -52,6 +52,9 @@
     tr:last-child td{border-bottom:none;}
     tr.modified td{background:#fefce8;}
     tr.done td{background:#f0fdf4;}
+    tfoot tr td{background:var(--surface2);font-weight:700;border-top:2px solid var(--border);padding:7px 6px;font-size:12.5px;}
+    tfoot .foot-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;}
+    tfoot .foot-val{color:var(--text);text-align:right;}
 
     .td-stt{color:var(--muted);font-size:11px;text-align:center;width:32px;padding-left:10px;}
     .td-name{font-weight:600;min-width:130px;}
@@ -179,6 +182,7 @@
         <tbody id="tableBody">
           <tr><td colspan="12" style="text-align:center;padding:32px;color:var(--muted);">Đang tải dữ liệu...</td></tr>
         </tbody>
+        <tfoot id="tableFoot"></tfoot>
       </table>
     </div>
   </div>
@@ -294,6 +298,27 @@
     }).join('');
     // Tính lại tiền cho tất cả hàng sau khi render
     filtered.forEach((_, i) => calcRowMoney(i));
+    renderFoot();
+  }
+
+  function renderFoot() {
+    const fmtM = v => (v||0).toLocaleString('vi-VN');
+    let sumTTSX = 0, sumTTMDK = 0, sumNoCu = 0, sumTong = 0;
+    filtered.forEach((_, i) => {
+      sumTTSX  += n(document.getElementById(`ttsx_v_${i}`)?.value);
+      sumTTMDK += n(document.getElementById(`ttmdk_v_${i}`)?.value);
+      sumNoCu  += n(document.getElementById(`nocu_${i}`)?.value);
+      sumTong  += n(document.getElementById(`tong_v_${i}`)?.value);
+    });
+    document.getElementById('tableFoot').innerHTML = `
+      <tr>
+        <td colspan="8" class="foot-label">Tổng cộng (${filtered.length} KH)</td>
+        <td class="foot-val">${fmtM(sumTTSX)}</td>
+        <td class="foot-val">${fmtM(sumTTMDK)}</td>
+        <td class="foot-val">${fmtM(sumNoCu)}</td>
+        <td class="foot-val" style="color:var(--primary);">${fmtM(sumTong)}</td>
+        <td></td>
+      </tr>`;
   }
 
   // Gọi khi chỉ số mới thay đổi — DienSX là giá trị cố định do người dùng nhập
@@ -336,6 +361,8 @@
     // Thành tiền
     document.getElementById(`tong_${i}`).textContent   = fmtM(tong);
     document.getElementById(`tong_v_${i}`).value       = tong;
+
+    renderFoot();
   }
 
   function markModified(i) {
