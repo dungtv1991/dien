@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Đăng nhập — Quản Lý Điện</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{
+      font-family:'Inter',Arial,sans-serif;
+      background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 55%,#2563eb 100%);
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+    }
+    .card{
+      background:#fff;border-radius:20px;padding:40px 36px;
+      width:100%;max-width:360px;
+      box-shadow:0 20px 60px rgba(0,0,0,.3);
+      text-align:center;
+    }
+    .icon{font-size:40px;margin-bottom:12px;}
+    h1{font-size:20px;font-weight:800;color:#0f172a;margin-bottom:4px;}
+    .sub{font-size:13px;color:#64748b;margin-bottom:28px;}
+    .field{text-align:left;margin-bottom:20px;}
+    .field label{display:block;font-size:11.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .field input{
+      width:100%;border:1.5px solid #e2e8f0;border-radius:10px;
+      padding:11px 14px;font-size:15px;font-family:inherit;
+      outline:none;transition:border .2s,box-shadow .2s;
+      letter-spacing:2px;
+    }
+    .field input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+    .field input.error{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.1);}
+    .err-msg{font-size:12px;color:#dc2626;margin-top:6px;min-height:18px;}
+    .btn{
+      width:100%;padding:12px;border:none;border-radius:10px;
+      background:linear-gradient(135deg,#1e3a8a,#2563eb);
+      color:#fff;font-size:15px;font-weight:700;font-family:inherit;
+      cursor:pointer;transition:opacity .15s,transform .1s;
+      letter-spacing:.3px;
+    }
+    .btn:hover{opacity:.92;}
+    .btn:active{transform:scale(.97);}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">⚡</div>
+  <h1>Quản Lý Điện</h1>
+  <div class="sub">Nhập mật khẩu để tiếp tục</div>
+  <div class="field">
+    <label>Mật khẩu</label>
+    <input type="password" id="pwd" placeholder="••••••••" autofocus
+      onkeydown="if(event.key==='Enter') doLogin()"/>
+    <div class="err-msg" id="errMsg"></div>
+  </div>
+  <button class="btn" onclick="doLogin()">Đăng nhập</button>
+</div>
+<script>
+  // Nếu đã đăng nhập rồi thì chuyển thẳng vào
+  const _auth = localStorage.getItem('auth_exp');
+  if (_auth && Date.now() < parseInt(_auth)) {
+    location.replace('index.html');
+  }
+
+  // Ping GAS ngay khi load để warm up, tránh cold start khi vào trang chính
+  const _gasUrl = localStorage.getItem('gas_url')
+    || 'https://script.google.com/macros/s/AKfycbwWGj2_wgq30WYDDadP7srK1SYdpSua2V_2mh8rWvo6TOGZPLZ8tDFGa8SVeE4sGhU/exec';
+  fetch(_gasUrl + '?sheet=Dien').catch(() => {});
+
+  function doLogin() {
+    const pwd = document.getElementById('pwd').value;
+    const inp = document.getElementById('pwd');
+    const err = document.getElementById('errMsg');
+    if (pwd === 'CHIPGON') {
+      // Lưu thời hạn 7 ngày
+      localStorage.setItem('auth_exp', Date.now() + 7 * 24 * 60 * 60 * 1000);
+      location.replace('index.html');
+    } else {
+      inp.classList.add('error');
+      err.textContent = 'Mật khẩu không đúng. Vui lòng thử lại.';
+      inp.value = '';
+      inp.focus();
+      setTimeout(() => inp.classList.remove('error'), 1500);
+    }
+  }
+</script>
+</body>
+</html>

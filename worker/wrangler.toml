@@ -1,0 +1,8 @@
+name = "quan-ly-dien"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "quan-ly-dien"
+database_id = "6d9b01f9-c343-4918-93db-dbbec04b0c80"

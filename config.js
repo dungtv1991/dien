@@ -1,6 +1,14 @@
 // ── GAS Web App URL ──
 const GAS_URL = localStorage.getItem('gas_url')
-  || 'https://script.google.com/macros/s/AKfycbwWGj2_wgq30WYDDadP7srK1SYdpSua2V_2mh8rWvo6TOGZPLZ8tDFGa8SVeE4sGhU/exec';
+  || 'https://quan-ly-dien.banaccdao.workers.dev';
+
+// ── Auth check — bảo vệ tất cả trang ──
+(function () {
+  const exp = localStorage.getItem('auth_exp');
+  if (!exp || Date.now() >= parseInt(exp)) {
+    location.replace('login.html');
+  }
+})();
 
 // ── Global loading overlay ──
 (function () {
