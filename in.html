@@ -306,8 +306,20 @@
 <script>
   let allRecords = [], selectedIdx = -1;
   let globalDien = JSON.parse(localStorage.getItem('dien_global') || '{}');
+  let dienTramMap = JSON.parse(localStorage.getItem('dien_tram_gia') || '{}');
   const fmt  = n => (parseFloat(n)||0).toLocaleString('vi-VN');
   const fmtD = n => (parseFloat(n)||0).toLocaleString('vi-VN') + ' đ';
+
+  // Ưu tiên: giá riêng KH → giá riêng trạm → giá chung
+  function getGia(r) {
+    const khSX  = parseFloat(r.DienSXRieng)  || 0;
+    const khMDK = parseFloat(r.DienMDKRieng) || 0;
+    const tram  = dienTramMap[r.Tram] || {};
+    return {
+      giaSX:  khSX  || parseFloat(tram.dien_sx)  || parseFloat(globalDien.dien_sx)  || 0,
+      giaMDK: khMDK || parseFloat(tram.dien_mdk) || parseFloat(globalDien.dien_mdk) || 0,
+    };
+  }
 
   function setStatus(s, t) {
     document.getElementById('dot').className = 'dot'+(s==='ok'?' ok':s==='err'?' err':' loading');
@@ -316,11 +328,19 @@
 
   async function loadDien() {
     try {
-      const rows = await gasGet('Dien');
-      if (rows && rows.length > 0) {
-        const r = rows[0];
+      const [dienRows, dienTramRows] = await Promise.all([
+        gasGet('Dien'),
+        gasGet('DienTram').catch(() => [])
+      ]);
+      if (dienRows && dienRows.length > 0) {
+        const r = dienRows[0];
         globalDien = { dien_sx: r.dien_sx, dien_mdk: r.dien_mdk, dinh_muc: r.dinh_muc };
         localStorage.setItem('dien_global', JSON.stringify({ ...globalDien, savedAt: new Date().toLocaleString('vi-VN') }));
+      }
+      if (dienTramRows && dienTramRows.length > 0) {
+        dienTramMap = {};
+        dienTramRows.forEach(r => { if (r.ten_tram) dienTramMap[r.ten_tram] = { dien_sx: r.dien_sx, dien_mdk: r.dien_mdk }; });
+        localStorage.setItem('dien_tram_gia', JSON.stringify(dienTramMap));
       }
     } catch { /* giữ nguyên cache localStorage */ }
   }
@@ -422,8 +442,7 @@
 
   // ── Nội dung một nửa phiếu ──
   function halfHTML(r, title, showNote, showFooter) {
-    const giaSX  = parseFloat(globalDien.dien_sx)  || 0;
-    const giaMDK = parseFloat(globalDien.dien_mdk) || 0;
+    const { giaSX, giaMDK } = getGia(r);
     const dinhMuc= parseFloat(globalDien.dinh_muc) || 0;
     const period = getPeriodText();
     const tieu   = (parseFloat(r.ChiSoMoi)||0)-(parseFloat(r.ChiSoCu)||0);
